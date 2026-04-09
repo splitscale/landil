@@ -1,4 +1,5 @@
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB hard limit
+const AVATAR_SIZE = 256; // px — square crop for profile pictures
 const TARGET_QUALITY = 0.82;
 const MIN_QUALITY = 0.5;
 const MAX_DIMENSION = 2560;
@@ -41,6 +42,38 @@ export async function compressImage(file: File): Promise<File> {
   if (!blob) return file; // fallback: return original
 
   return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
+/**
+ * Crop to a centered square then resize to AVATAR_SIZE×AVATAR_SIZE.
+ * Always outputs JPEG regardless of input format.
+ */
+export async function compressAvatar(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  const { width: w, height: h } = bitmap;
+
+  // Center-crop to square
+  const side = Math.min(w, h);
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = AVATAR_SIZE;
+  canvas.height = AVATAR_SIZE;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((res) =>
+    canvas.toBlob(res, "image/jpeg", 0.88),
+  );
+
+  if (!blob) return file;
+
+  return new File([blob], "avatar.jpg", {
     type: "image/jpeg",
     lastModified: Date.now(),
   });

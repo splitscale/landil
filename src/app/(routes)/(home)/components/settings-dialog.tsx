@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
-import { Monitor, Moon, Sun, User, SlidersHorizontal, X } from "lucide-react";
+import { Camera, Loader2, Monitor, Moon, Sun, User, SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogClose,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { updateUser, changePassword } from "@/lib/auth/client";
+import { useUploadThing } from "@/lib/uploadthing";
+import { compressAvatar } from "@/lib/compress-image";
+import { verifyCdnUrl } from "@/lib/verify-cdn-url";
 
 type SettingsUser = {
   name: string;
@@ -67,7 +71,7 @@ export default function SettingsDialog({
       >
         {/* Header */}
         <div className="flex h-11 items-center justify-between border-b border-border px-4">
-          <span className="text-sm font-semibold">Settings</span>
+          <DialogTitle className="text-sm font-semibold">Settings</DialogTitle>
           <DialogClose className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <X size={16} />
             <span className="sr-only">Close</span>
@@ -113,6 +117,26 @@ export default function SettingsDialog({
 // ── Account ────────────────────────────────────────────────────────────────────
 
 function AccountSection({ user }: { user: SettingsUser }) {
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  // Seed from localStorage cache first, fall back to server value
+  const [avatarSrc, setAvatarSrc] = useState<string | undefined>(() => {
+    try {
+      return localStorage.getItem("landil:avatar") ?? user.image ?? undefined;
+    } catch {
+      return user.image ?? undefined;
+    }
+  });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Revoke stale blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, []);
+
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -121,8 +145,58 @@ function AccountSection({ user }: { user: SettingsUser }) {
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  const { startUpload } = useUploadThing("avatar");
+
   const profileDirty =
     name.trim() !== user.name || username.trim() !== (user.username ?? "");
+
+  const handleAvatarChange = async (file: File | undefined) => {
+    if (!file) return;
+    console.log("[avatar:client] file selected —", file.name, file.size, "bytes", file.type);
+    setUploadingAvatar(true);
+
+    // Revoke previous blob if any
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+
+    try {
+      const compressed = await compressAvatar(file);
+      console.log("[avatar:client] compressed —", compressed.size, "bytes");
+
+      // Optimistic preview from local blob — shows instantly
+      const blobUrl = URL.createObjectURL(compressed);
+      blobUrlRef.current = blobUrl;
+      setAvatarSrc(blobUrl);
+
+      console.log("[avatar:client] calling startUpload...");
+      const res = await startUpload([compressed]);
+      console.log("[avatar:client] startUpload resolved —", res);
+
+      const url = res?.[0]?.url;
+      if (!url) throw new Error("Upload failed: no URL returned");
+      console.log("[avatar:client] url:", url);
+
+      await verifyCdnUrl(url);
+      console.log("[avatar:client] CDN verified");
+
+      try { localStorage.setItem("landil:avatar", url); } catch { /* quota */ }
+
+      toast.success("Avatar updated.");
+    } catch (e) {
+      console.error("[avatar:client] error:", e);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      const fallback = (() => { try { return localStorage.getItem("landil:avatar"); } catch { return null; } })();
+      setAvatarSrc(fallback ?? user.image ?? undefined);
+      toast.error(e instanceof Error ? e.message : "Failed to upload avatar.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!name.trim()) { toast.error("Name can't be empty."); return; }
@@ -156,12 +230,35 @@ function AccountSection({ user }: { user: SettingsUser }) {
   return (
     <div className="space-y-6">
 
-      {/* Avatar + name */}
+      {/* Avatar */}
       <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={user.image ?? undefined} alt={user.name} />
-          <AvatarFallback className="text-xs">{initials(user.name)}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          onClick={() => avatarInputRef.current?.click()}
+          disabled={uploadingAvatar}
+          className="group relative h-14 w-14 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Avatar className="h-14 w-14">
+            <AvatarImage src={avatarSrc} alt={user.name} />
+            <AvatarFallback className="text-sm">{initials(user.name)}</AvatarFallback>
+          </Avatar>
+          <div className={cn(
+            "absolute inset-0 flex items-center justify-center rounded-full bg-black/50 transition-opacity",
+            uploadingAvatar ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          )}>
+            {uploadingAvatar
+              ? <Loader2 size={14} className="animate-spin text-white" />
+              : <Camera size={14} className="text-white" />
+            }
+          </div>
+        </button>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { handleAvatarChange(e.target.files?.[0]); e.target.value = ""; }}
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{user.name}</p>
           <p className="truncate text-xs text-muted-foreground">{user.email}</p>

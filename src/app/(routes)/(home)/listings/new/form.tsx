@@ -20,6 +20,7 @@ import { encumbranceOptions, ListingSchema, ListingValues, propertyTypes, titleT
 import { useUploadThing } from "@/lib/uploadthing";
 import { compressImage } from "@/lib/compress-image";
 import { fileHash, getCached, setCached, purgeExpired } from "@/lib/upload-cache";
+import { verifyCdnUrl } from "@/lib/verify-cdn-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,10 +77,8 @@ export default function NewListingForm() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
-  const { startUpload: uploadPhotos, isUploading: photosUploading } =
-    useUploadThing("listingPhotos");
-  const { startUpload: uploadDocs, isUploading: docsUploading } =
-    useUploadThing("listingDocs");
+  const { startUpload: uploadPhotos, isUploading: photosUploading } = useUploadThing("listingPhotos");
+  const { startUpload: uploadDocs, isUploading: docsUploading } = useUploadThing("listingDocs");
 
   const form = useForm<ListingValues>({
     resolver: zodResolver(ListingSchema),
@@ -150,21 +149,36 @@ export default function NewListingForm() {
       );
 
       // Upload (client-side → UploadThing CDN, bypasses Vercel limit)
-      const results = await uploadPhotos([compressed]);
-      if (!results || results.length === 0) {
+      let uploadedUrl: string;
+      let uploadedKey: string;
+      try {
+        const res = await uploadPhotos([compressed]);
+        const item = res?.[0];
+        if (!item?.url || !item?.key) throw new Error("No URL returned");
+        uploadedUrl = item.url;
+        uploadedKey = item.key;
+      } catch (e) {
         setPhotos((prev) =>
           prev.map((p) => p.id === entry.id ? { ...p, status: "error" } : p),
         );
-        toast.error(`Failed to upload ${entry.file.name}`);
+        toast.error(`Failed to upload ${entry.file.name}: ${e instanceof Error ? e.message : "unknown error"}`);
         continue;
       }
 
-      const { ufsUrl, key } = results[0];
-      setCached(hash, { key, url: ufsUrl, name: entry.file.name });
+      try {
+        await verifyCdnUrl(uploadedUrl);
+      } catch (e) {
+        setPhotos((prev) =>
+          prev.map((p) => p.id === entry.id ? { ...p, status: "error" } : p),
+        );
+        toast.error(`Photo CDN verification failed: ${e instanceof Error ? e.message : "CDN error"}`);
+        continue;
+      }
+      setCached(hash, { key: uploadedKey, url: uploadedUrl, name: entry.file.name });
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === entry.id
-            ? { ...p, status: "done", uploadedUrl: ufsUrl, uploadedKey: key }
+            ? { ...p, status: "done", uploadedUrl, uploadedKey }
             : p,
         ),
       );
@@ -217,21 +231,36 @@ export default function NewListingForm() {
         ? await compressImage(entry.file).catch(() => entry.file)
         : entry.file;
 
-      const results = await uploadDocs([fileToUpload]);
-      if (!results || results.length === 0) {
+      let uploadedUrl: string;
+      let uploadedKey: string;
+      try {
+        const res = await uploadDocs([fileToUpload]);
+        const item = res?.[0];
+        if (!item?.url || !item?.key) throw new Error("No URL returned");
+        uploadedUrl = item.url;
+        uploadedKey = item.key;
+      } catch (e) {
         setDocs((prev) =>
           prev.map((d) => d.id === entry.id ? { ...d, status: "error" } : d),
         );
-        toast.error(`Failed to upload ${entry.file.name}`);
+        toast.error(`Failed to upload ${entry.file.name}: ${e instanceof Error ? e.message : "unknown error"}`);
         continue;
       }
 
-      const { ufsUrl, key } = results[0];
-      setCached(hash, { key, url: ufsUrl, name: entry.file.name });
+      try {
+        await verifyCdnUrl(uploadedUrl);
+      } catch (e) {
+        setDocs((prev) =>
+          prev.map((d) => d.id === entry.id ? { ...d, status: "error" } : d),
+        );
+        toast.error(`Doc CDN verification failed: ${e instanceof Error ? e.message : "CDN error"}`);
+        continue;
+      }
+      setCached(hash, { key: uploadedKey, url: uploadedUrl, name: entry.file.name });
       setDocs((prev) =>
         prev.map((d) =>
           d.id === entry.id
-            ? { ...d, status: "done", uploadedUrl: ufsUrl, uploadedKey: key }
+            ? { ...d, status: "done", uploadedUrl, uploadedKey }
             : d,
         ),
       );

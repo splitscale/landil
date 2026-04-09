@@ -12,6 +12,7 @@ export async function proxy(request: NextRequest) {
   const session = getSessionCookie(request);
 
   const isApiAuth = request.nextUrl.pathname.startsWith(apiAuthPrefix);
+  const isApiUploadThing = request.nextUrl.pathname.startsWith("/api/uploadthing");
 
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
 
@@ -19,7 +20,7 @@ export async function proxy(request: NextRequest) {
     return authRoutes.some((path) => request.nextUrl.pathname.startsWith(path));
   };
 
-  if (isApiAuth) {
+  if (isApiAuth || isApiUploadThing) {
     return NextResponse.next();
   }
 
