@@ -12,18 +12,40 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
 import {
   Check, ChevronLeft, ChevronRight, FileText,
-  Globe, ImagePlus, Lock, Plus, Save, Send, X,
+  Globe, ImagePlus, Loader2, Lock, Plus, Save, Send, X,
 } from "lucide-react";
 import { encumbranceOptions, ListingSchema, ListingValues, propertyTypes, titleTypes, utilityOptions } from "@/app/(routes)/(home)/listings/new/validate";
+import { useUploadThing } from "@/lib/uploadthing";
+import { compressImage } from "@/lib/compress-image";
+import { fileHash, getCached, setCached, purgeExpired } from "@/lib/upload-cache";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PhotoEntry = { id: string; file: File; preview: string };
+type UploadStatus = "idle" | "compressing" | "uploading" | "done" | "error";
+
+type PhotoEntry = {
+  id: string;
+  file: File;
+  preview: string;
+  status: UploadStatus;
+  uploadedUrl?: string;
+  uploadedKey?: string;
+};
+
 type DocVisibility = "public" | "private";
-type DocEntry = { id: string; file: File; name: string; size: string; visibility: DocVisibility };
+
+type DocEntry = {
+  id: string;
+  file: File;
+  name: string;
+  size: string;
+  visibility: DocVisibility;
+  status: UploadStatus;
+  uploadedUrl?: string;
+  uploadedKey?: string;
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -40,7 +62,6 @@ function formatBytes(bytes: number) {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Matches your Input component's className so <select> and <textarea> look native
 const fieldCls =
   "border-input flex w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:opacity-50 md:text-sm";
 
@@ -54,6 +75,11 @@ export default function NewListingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+
+  const { startUpload: uploadPhotos, isUploading: photosUploading } =
+    useUploadThing("listingPhotos");
+  const { startUpload: uploadDocs, isUploading: docsUploading } =
+    useUploadThing("listingDocs");
 
   const form = useForm<ListingValues>({
     resolver: zodResolver(ListingSchema),
@@ -77,12 +103,72 @@ export default function NewListingForm() {
 
   // ── Photos ─────────────────────────────────────────────────────────────────
 
-  const addPhotos = (files: FileList | null) => {
+  const addPhotos = async (files: FileList | null) => {
     if (!files) return;
-    const next = Array.from(files)
-      .slice(0, 20 - photos.length)
-      .map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) }));
-    setPhotos((prev) => [...prev, ...next]);
+    purgeExpired();
+
+    const incoming = Array.from(files).slice(0, 20 - photos.length);
+
+    // Build entries immediately for preview (status = compressing)
+    const entries: PhotoEntry[] = incoming.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: URL.createObjectURL(file),
+      status: "compressing" as UploadStatus,
+    }));
+    setPhotos((prev) => [...prev, ...entries]);
+
+    // Process each file: check cache → compress → upload
+    for (const entry of entries) {
+      const hash = fileHash(entry.file);
+      const cached = getCached(hash);
+
+      if (cached) {
+        setPhotos((prev) =>
+          prev.map((p) =>
+            p.id === entry.id
+              ? { ...p, status: "done", uploadedUrl: cached.url, uploadedKey: cached.key }
+              : p,
+          ),
+        );
+        continue;
+      }
+
+      // Compress
+      let compressed: File;
+      try {
+        compressed = await compressImage(entry.file);
+      } catch {
+        setPhotos((prev) =>
+          prev.map((p) => p.id === entry.id ? { ...p, status: "error" } : p),
+        );
+        continue;
+      }
+
+      setPhotos((prev) =>
+        prev.map((p) => p.id === entry.id ? { ...p, status: "uploading" } : p),
+      );
+
+      // Upload (client-side → UploadThing CDN, bypasses Vercel limit)
+      const results = await uploadPhotos([compressed]);
+      if (!results || results.length === 0) {
+        setPhotos((prev) =>
+          prev.map((p) => p.id === entry.id ? { ...p, status: "error" } : p),
+        );
+        toast.error(`Failed to upload ${entry.file.name}`);
+        continue;
+      }
+
+      const { ufsUrl, key } = results[0];
+      setCached(hash, { key, url: ufsUrl, name: entry.file.name });
+      setPhotos((prev) =>
+        prev.map((p) =>
+          p.id === entry.id
+            ? { ...p, status: "done", uploadedUrl: ufsUrl, uploadedKey: key }
+            : p,
+        ),
+      );
+    }
   };
 
   const removePhoto = (id: string) => {
@@ -95,16 +181,61 @@ export default function NewListingForm() {
 
   // ── Docs ───────────────────────────────────────────────────────────────────
 
-  const addDocs = (files: FileList | null) => {
+  const addDocs = async (files: FileList | null) => {
     if (!files) return;
-    const next = Array.from(files).map((file) => ({
+    purgeExpired();
+
+    const incoming = Array.from(files);
+
+    const entries: DocEntry[] = incoming.map((file) => ({
       id: crypto.randomUUID(),
       file,
       name: file.name,
       size: formatBytes(file.size),
       visibility: "private" as DocVisibility,
+      status: "uploading" as UploadStatus,
     }));
-    setDocs((prev) => [...prev, ...next]);
+    setDocs((prev) => [...prev, ...entries]);
+
+    for (const entry of entries) {
+      const hash = fileHash(entry.file);
+      const cached = getCached(hash);
+
+      if (cached) {
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === entry.id
+              ? { ...d, status: "done", uploadedUrl: cached.url, uploadedKey: cached.key }
+              : d,
+          ),
+        );
+        continue;
+      }
+
+      // Images in docs also get compressed
+      const fileToUpload = entry.file.type.startsWith("image/")
+        ? await compressImage(entry.file).catch(() => entry.file)
+        : entry.file;
+
+      const results = await uploadDocs([fileToUpload]);
+      if (!results || results.length === 0) {
+        setDocs((prev) =>
+          prev.map((d) => d.id === entry.id ? { ...d, status: "error" } : d),
+        );
+        toast.error(`Failed to upload ${entry.file.name}`);
+        continue;
+      }
+
+      const { ufsUrl, key } = results[0];
+      setCached(hash, { key, url: ufsUrl, name: entry.file.name });
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === entry.id
+            ? { ...d, status: "done", uploadedUrl: ufsUrl, uploadedKey: key }
+            : d,
+        ),
+      );
+    }
   };
 
   const toggleDocVisibility = (id: string) =>
@@ -139,18 +270,25 @@ export default function NewListingForm() {
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   const handleNext = async () => {
-    if (step === 2) {
-      // Trigger to surface errors visually, but never block
-      await form.trigger(STEP2_FIELDS);
-    }
+    if (step === 2) await form.trigger(STEP2_FIELDS);
     setStep((s) => s + 1);
   };
 
   const handleBack = () => setStep((s) => Math.max(1, s - 1));
 
+  const isAnyUploading = photosUploading || docsUploading ||
+    photos.some((p) => p.status === "compressing" || p.status === "uploading") ||
+    docs.some((d) => d.status === "uploading");
+
   const handlePublish = async (status: "draft" | "published") => {
-    await form.trigger(); // surfaces all errors in place
+    if (isAnyUploading) {
+      toast.error("Please wait for uploads to finish.");
+      return;
+    }
+
+    await form.trigger();
     setIsSubmitting(true);
+
     try {
       const res = await fetch("/api/listings", {
         method: "POST",
@@ -158,8 +296,12 @@ export default function NewListingForm() {
         body: JSON.stringify({
           status,
           values: form.getValues(),
-          photoCount: photos.length,
-          docCount: docs.length,
+          photos: photos
+            .filter((p) => p.status === "done")
+            .map((p, i) => ({ url: p.uploadedUrl!, key: p.uploadedKey!, cover: i === 0 })),
+          docs: docs
+            .filter((d) => d.status === "done")
+            .map((d) => ({ url: d.uploadedUrl!, key: d.uploadedKey!, name: d.name, visibility: d.visibility })),
         }),
       });
       if (!res.ok) throw new Error();
@@ -186,9 +328,7 @@ export default function NewListingForm() {
     const step2Fields: (keyof ListingValues)[] = [
       "title", "askingPrice", "lotArea", "city", "province", "description",
     ];
-    return {
-      2: step2Fields.filter((f) => !!errors[f]).length,
-    };
+    return { 2: step2Fields.filter((f) => !!errors[f]).length };
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -217,19 +357,13 @@ export default function NewListingForm() {
                   >
                     {done ? <Check size={12} /> : n}
                   </div>
-                  {/* Error badge */}
                   {errCount > 0 && !active && (
                     <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white">
                       {errCount}
                     </span>
                   )}
                 </div>
-                <span
-                  className={cn(
-                    "hidden text-xs sm:block",
-                    active ? "font-medium text-foreground" : "text-muted-foreground",
-                  )}
-                >
+                <span className={cn("hidden text-xs sm:block", active ? "font-medium text-foreground" : "text-muted-foreground")}>
                   {label}
                 </span>
               </div>
@@ -247,7 +381,7 @@ export default function NewListingForm() {
             <div className="rounded-xl border border-border p-5">
               <p className="text-sm font-medium">Property photos</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                First photo becomes the cover. Up to 20 photos.
+                Images are compressed automatically. First photo is the cover. Up to 20.
               </p>
 
               {photos.length === 0 ? (
@@ -272,10 +406,26 @@ export default function NewListingForm() {
                           Cover
                         </span>
                       )}
+
+                      {/* Upload status overlay */}
+                      {(p.status === "compressing" || p.status === "uploading") && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50">
+                          <Loader2 size={14} className="animate-spin text-white" />
+                          <span className="text-[9px] text-white">
+                            {p.status === "compressing" ? "Compressing…" : "Uploading…"}
+                          </span>
+                        </div>
+                      )}
+                      {p.status === "error" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-destructive/60">
+                          <span className="text-[9px] font-medium text-white">Failed</span>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => removePhoto(p.id)}
-                        className="absolute right-1 top-1 hidden rounded bg-black/60 p-0.5 text-white group-hover:flex"
+                        className="absolute right-1 top-1 hidden rounded bg-black/60 p-0.5 text-white hover:bg-black/80 group-hover:flex"
                       >
                         <X size={10} />
                       </button>
@@ -300,7 +450,7 @@ export default function NewListingForm() {
                 accept="image/*"
                 multiple
                 className="hidden"
-                onChange={(e) => addPhotos(e.target.files)}
+                onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }}
               />
             </div>
           )}
@@ -308,7 +458,6 @@ export default function NewListingForm() {
           {/* ── Step 2: Property specs ── */}
           {step === 2 && (
             <>
-              {/* Listing basics */}
               <div className="rounded-xl border border-border p-5 space-y-4">
                 <div>
                   <p className="text-sm font-medium">Listing basics</p>
@@ -317,7 +466,6 @@ export default function NewListingForm() {
                   </p>
                 </div>
 
-                {/* Property type */}
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Property type</Label>
                   <div className="flex flex-wrap gap-2">
@@ -329,8 +477,8 @@ export default function NewListingForm() {
                         className={cn(
                           "rounded-full border px-3 py-1 text-xs transition-colors",
                           form.watch("propertyType") === type
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border text-muted-foreground hover:bg-muted",
+                            ? "border-foreground bg-foreground text-background hover:bg-foreground/85"
+                            : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-muted",
                         )}
                       >
                         {type}
@@ -339,22 +487,18 @@ export default function NewListingForm() {
                   </div>
                 </div>
 
-                {/* Title */}
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
                     <FormItem>
                       <Label className="text-xs text-muted-foreground">Listing title</Label>
-                      <FormControl>
-                        <Input placeholder="e.g. 300 sqm Titled Lot in Cebu" {...field} />
-                      </FormControl>
+                      <FormControl><Input placeholder="e.g. 300 sqm Titled Lot in Cebu" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Price */}
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
@@ -362,25 +506,17 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Asking price (PHP)</Label>
-                        <FormControl>
-                          <Input placeholder="3,500,000" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="3,500,000" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Price per sqm</Label>
-                    <Input
-                      readOnly
-                      value={pricePerSqm()}
-                      placeholder="Auto-computed"
-                      className="bg-muted/50 text-muted-foreground"
-                    />
+                    <Input readOnly value={pricePerSqm()} placeholder="Auto-computed" className="bg-muted/50 text-muted-foreground" />
                   </div>
                 </div>
 
-                {/* Area */}
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
@@ -388,9 +524,7 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Lot area (sqm)</Label>
-                        <FormControl>
-                          <Input placeholder="300" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="300" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -401,16 +535,13 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Floor area (sqm)</Label>
-                        <FormControl>
-                          <Input placeholder="If applicable" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="If applicable" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Location */}
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
@@ -418,9 +549,7 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">City / Municipality</Label>
-                        <FormControl>
-                          <Input placeholder="Consolacion" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="Consolacion" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -431,16 +560,13 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Province</Label>
-                        <FormControl>
-                          <Input placeholder="Cebu" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="Cebu" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Description */}
                 <FormField
                   control={form.control}
                   name="description"
@@ -460,13 +586,10 @@ export default function NewListingForm() {
                 />
               </div>
 
-              {/* Title & ownership */}
               <div className="rounded-xl border border-border p-5 space-y-4">
                 <div>
                   <p className="text-sm font-medium">Title & ownership</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Helps buyers start due diligence immediately.
-                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Helps buyers start due diligence immediately.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -491,9 +614,7 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Title number</Label>
-                        <FormControl>
-                          <Input placeholder="e.g. TCT-12345" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="e.g. TCT-12345" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -507,9 +628,7 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Registry of Deeds</Label>
-                        <FormControl>
-                          <Input placeholder="e.g. RD Cebu City" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="e.g. RD Cebu City" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -520,9 +639,7 @@ export default function NewListingForm() {
                     render={({ field }) => (
                       <FormItem>
                         <Label className="text-xs text-muted-foreground">Lot number</Label>
-                        <FormControl>
-                          <Input placeholder="e.g. Lot 4, Block 2" {...field} />
-                        </FormControl>
+                        <FormControl><Input placeholder="e.g. Lot 4, Block 2" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -542,8 +659,8 @@ export default function NewListingForm() {
                           className={cn(
                             "rounded-full border px-3 py-1 text-xs transition-colors",
                             selected
-                              ? "border-foreground bg-foreground text-background"
-                              : "border-border text-muted-foreground hover:bg-muted",
+                              ? "border-foreground bg-foreground text-background hover:bg-foreground/85"
+                              : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-muted",
                           )}
                         >
                           {opt}
@@ -554,13 +671,10 @@ export default function NewListingForm() {
                 </div>
               </div>
 
-              {/* Utilities & access */}
               <div className="rounded-xl border border-border p-5 space-y-3">
                 <div>
                   <p className="text-sm font-medium">Utilities & access</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Flag what's available on or near the property.
-                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Flag what's available on or near the property.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {utilityOptions.map((opt) => {
@@ -573,8 +687,8 @@ export default function NewListingForm() {
                         className={cn(
                           "rounded-full border px-3 py-1 text-xs transition-colors",
                           selected
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border text-muted-foreground hover:bg-muted",
+                            ? "border-foreground bg-foreground text-background hover:bg-foreground/85"
+                            : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-muted",
                         )}
                       >
                         {opt}
@@ -599,10 +713,8 @@ export default function NewListingForm() {
               <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
                 <FileText size={13} className="mt-0.5 shrink-0 text-muted-foreground" />
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  <span className="font-medium text-foreground">Private</span> docs are only
-                  shared after you approve a buyer's request.{" "}
-                  <span className="font-medium text-foreground">Public</span> docs are visible
-                  on the listing page.
+                  <span className="font-medium text-foreground">Private</span> docs are only shared after you approve a buyer's request.{" "}
+                  <span className="font-medium text-foreground">Public</span> docs are visible on the listing page.
                 </p>
               </div>
 
@@ -611,20 +723,29 @@ export default function NewListingForm() {
                   {docs.map((doc) => (
                     <div key={doc.id} className="flex items-center gap-3 py-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                        <FileText size={14} className="text-muted-foreground" />
+                        {doc.status === "uploading" ? (
+                          <Loader2 size={14} className="animate-spin text-muted-foreground" />
+                        ) : doc.status === "error" ? (
+                          <X size={14} className="text-destructive" />
+                        ) : (
+                          <FileText size={14} className="text-muted-foreground" />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">{doc.size}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {doc.status === "uploading" ? "Uploading…" : doc.status === "error" ? "Failed" : doc.size}
+                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => toggleDocVisibility(doc.id)}
+                        disabled={doc.status !== "done"}
                         className={cn(
-                          "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+                          "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40",
                           doc.visibility === "private"
-                            ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400"
-                            : "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400",
+                            ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900"
+                            : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950 dark:text-green-400 dark:hover:bg-green-900",
                         )}
                       >
                         {doc.visibility === "private" ? <Lock size={10} /> : <Globe size={10} />}
@@ -655,7 +776,7 @@ export default function NewListingForm() {
                 type="file"
                 multiple
                 className="hidden"
-                onChange={(e) => addDocs(e.target.files)}
+                onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }}
               />
             </div>
           )}
@@ -671,8 +792,8 @@ export default function NewListingForm() {
                   ["Title", form.getValues("title") || "—"],
                   ["Asking price", form.getValues("askingPrice") ? `₱${form.getValues("askingPrice")}` : "—"],
                   ["Location", [form.getValues("city"), form.getValues("province")].filter(Boolean).join(", ") || "—"],
-                  ["Photos", String(photos.length)],
-                  ["Documents", `${docs.length} (${docs.filter((d) => d.visibility === "public").length} public)`],
+                  ["Photos", `${photos.filter((p) => p.status === "done").length} / ${photos.length} uploaded`],
+                  ["Documents", `${docs.filter((d) => d.status === "done").length} (${docs.filter((d) => d.status === "done" && d.visibility === "public").length} public)`],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between text-sm">
                     <dt className="text-muted-foreground">{label}</dt>
@@ -681,12 +802,18 @@ export default function NewListingForm() {
                 ))}
               </dl>
 
-              {/* Show a hint if there are errors */}
-              {Object.keys(form.formState.errors).length > 0 && (
+              {isAnyUploading && (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
+                  <Loader2 size={13} className="animate-spin text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Uploads in progress — please wait before publishing.</p>
+                </div>
+              )}
+
+              {!isAnyUploading && Object.keys(form.formState.errors).length > 0 && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950">
                   <span className="mt-0.5 text-amber-500" aria-hidden>⚠</span>
                   <p className="text-xs text-amber-700 dark:text-amber-400">
-                    Some required fields are incomplete. You can save as draft and finish later, or go back to fix them before publishing.
+                    Some required fields are incomplete. You can save as draft and finish later, or go back to fix them.
                   </p>
                 </div>
               )}
@@ -695,20 +822,20 @@ export default function NewListingForm() {
                 <Button
                   type="button"
                   className="w-full"
-                  disabled={isSubmitting || Object.keys(form.formState.errors).length > 0}
+                  disabled={isSubmitting || isAnyUploading || Object.keys(form.formState.errors).length > 0}
                   onClick={() => handlePublish("published")}
                 >
-                  <Send size={14} />
+                  {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                   Publish listing
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isAnyUploading}
                   onClick={() => handlePublish("draft")}
                 >
-                  <Save size={14} />
+                  {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                   Save as draft
                 </Button>
               </div>
