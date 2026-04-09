@@ -1,0 +1,1762 @@
+# Project Directory Structure:
+.
+├── drizzle/
+│   ├── meta/
+│   │   ├── 0000_snapshot.json
+│   │   └── _journal.json
+│   └── 0000_illegal_peter_parker.sql
+├── public/
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── src/
+│   ├── app/
+│   │   ├── (routes)/
+│   │   │   ├── (auth)/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── button-signout.tsx
+│   │   │   │   │   ├── gender-radio-group.tsx
+│   │   │   │   │   ├── input-password.tsx
+│   │   │   │   │   └── input-start-icon.tsx
+│   │   │   │   ├── signin/
+│   │   │   │   │   ├── form.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── validate.ts
+│   │   │   │   └── signup/
+│   │   │   │       ├── form.tsx
+│   │   │   │       ├── page.tsx
+│   │   │   │       └── validate.ts
+│   │   │   └── (home)/
+│   │   │       ├── listings/
+│   │   │       │   └── new/
+│   │   │       │       ├── form.tsx
+│   │   │       │       ├── page.tsx
+│   │   │       │       └── validate.ts
+│   │   │       └── page.tsx
+│   │   ├── api/
+│   │   │   ├── auth/
+│   │   │   │   └── [...all]/
+│   │   │   │       └── route.ts
+│   │   │   └── listings/
+│   │   ├── fonts/
+│   │   │   ├── GeistMonoVF.woff
+│   │   │   └── GeistVF.woff
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   └── layout.tsx
+│   ├── components/
+│   │   └── ui/
+│   │       ├── button.tsx
+│   │       ├── form.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── radio-group.tsx
+│   │       └── sonner.tsx
+│   ├── db/
+│   │   ├── schema/
+│   │   │   ├── auth/
+│   │   │   │   ├── account.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── session.ts
+│   │   │   │   ├── user.ts
+│   │   │   │   └── verification.ts
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   ├── lib/
+│   │   ├── auth/
+│   │   │   ├── client.ts
+│   │   │   ├── get-session.ts
+│   │   │   ├── password.ts
+│   │   │   ├── server.ts
+│   │   │   └── usernames.ts
+│   │   └── utils.ts
+│   ├── providers/
+│   │   └── index.tsx
+│   ├── proxy.ts
+│   └── routes.ts
+├── .eslintrc.json
+├── .prettierrc.json
+├── LICENSE
+├── README.md
+├── bun.lock
+├── components.json
+├── drizzle.config.ts
+├── env.example
+├── gptree_output.txt
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+└── tsconfig.json
+
+# BEGIN FILE CONTENTS
+
+# File: src/app/(routes)/(auth)/components/button-signout.tsx
+
+"use client";
+
+import { useState } from "react";
+import { signOut } from "@/lib/auth/client";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+
+export default function SignOutButton() {
+  const [isPending, setIsPending] = useState(false);
+
+  const onSignOut = async () => {
+    setIsPending(true);
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          setIsPending(false);
+          redirect("/");
+        },
+      },
+    });
+  };
+
+  return (
+    <Button disabled={isPending} onClick={onSignOut} variant={"destructive"}>
+      Logout
+    </Button>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/components/gender-radio-group.tsx
+
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+const options = [
+  { id: "male", label: "Male", value: false },
+  { id: "female", label: "Female", value: true },
+];
+
+export function GenderRadioGroup({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (val: boolean) => void;
+}) {
+  return (
+    <RadioGroup
+      value={String(value)}
+      onValueChange={(val) => onChange(val === "true")}
+      className="grid grid-cols-3 gap-4"
+    >
+      {options.map((opt) => (
+        <div
+          key={opt.id}
+          className={cn(
+            "mt-2 flex items-center space-x-2 rounded-lg px-4 py-2 ring transition-all duration-300",
+            value === opt.value
+              ? "ring-primary/10 bg-muted text-foreground"
+              : "ring-muted hover:bg-muted text-muted-foreground",
+          )}
+        >
+          <RadioGroupItem
+            id={opt.id}
+            value={String(opt.value)}
+            className="peer sr-only"
+          />
+          <Label
+            htmlFor={opt.id}
+            className="mx-auto flex w-full cursor-pointer items-center justify-center text-sm font-medium transition-all duration-300"
+          >
+            {opt.label}
+          </Label>
+        </div>
+      ))}
+    </RadioGroup>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/components/input-password.tsx
+
+"use client";
+
+import { Eye, EyeOff } from "lucide-react";
+import { cloneElement, useState, ReactElement, isValidElement } from "react";
+
+interface InputPasswordContainerProps {
+  children: ReactElement<{ type?: string }>;
+}
+
+export default function InputPasswordContainer({
+  children,
+}: InputPasswordContainerProps) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  const toggleVisibility = () => setIsVisible((prevState) => !prevState);
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        {isValidElement(children) &&
+          cloneElement(children, {
+            type: isVisible ? "text" : "password",
+          })}
+        <button
+          className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          onClick={toggleVisibility}
+          aria-label={isVisible ? "Hide password" : "Show password"}
+          aria-pressed={isVisible}
+        >
+          {isVisible ? (
+            <EyeOff size={16} strokeWidth={2} aria-hidden="true" />
+          ) : (
+            <Eye size={16} strokeWidth={2} aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/components/input-start-icon.tsx
+
+import { LucideIcon } from "lucide-react";
+
+export default function InputStartIcon({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  icon: LucideIcon;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        {children}
+        <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+          <Icon size={16} strokeWidth={2} aria-hidden="true" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/signin/form.tsx
+
+"use client";
+
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { signIn } from "@/lib/auth/client";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { SignInSchema, SignInValues } from "./validate";
+import InputStartIcon from "../components/input-start-icon";
+import InputPasswordContainer from "../components/input-password";
+import { cn } from "@/lib/utils";
+import { AtSign } from "lucide-react";
+
+export default function SignInForm() {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const form = useForm<SignInValues>({
+    resolver: zodResolver(SignInSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  function onSubmit(data: SignInValues) {
+    startTransition(async () => {
+      const response = await signIn.username(data);
+
+      if (response.error) {
+        console.log("SIGN_IN:", response.error.message);
+        toast.error(response.error.message);
+      } else {
+        router.push("/");
+      }
+    });
+  }
+
+  const getInputClassName = (fieldName: keyof SignInValues) =>
+    cn(
+      form.formState.errors[fieldName] &&
+        "border-destructive/80 text-destructive focus-visible:border-destructive/80 focus-visible:ring-destructive/20",
+    );
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="z-50 my-8 flex w-full flex-col gap-5"
+      >
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputStartIcon icon={AtSign}>
+                  <Input
+                    placeholder="Username"
+                    className={cn("peer ps-9", getInputClassName("username"))}
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputStartIcon>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputPasswordContainer>
+                  <Input
+                    id="input-23"
+                    className={cn("pe-9", getInputClassName("password"))}
+                    placeholder="Password"
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputPasswordContainer>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isPending} className="mt-5 w-full">
+          Sign In
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/signin/page.tsx
+
+import { type Metadata } from "next";
+import SignInForm from "./form";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+};
+
+export default function SignInPage() {
+  return (
+    <div className="flex min-h-screen w-full flex-col items-center justify-center">
+      <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Welcome back
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Good to see you again. Sign in to continue to Landil.
+          </p>
+        </div>
+
+        <SignInForm />
+
+        <div className="flex items-center justify-center gap-2">
+          <small>Don&apos;t have an account?</small>
+          <Link href="/signup" className="text-sm font-bold leading-none">
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+# File: src/app/(routes)/(auth)/signin/validate.ts
+
+import { z } from "zod";
+
+export const SignInSchema = z.object({
+  username: z.string().min(4, { message: "Username is required" }),
+  password: z
+    .string()
+    .min(6, { message: "Password lenght at least 6 characters" }),
+});
+
+export type SignInValues = z.infer<typeof SignInSchema>;
+
+
+# File: src/app/(routes)/(auth)/signup/form.tsx
+
+"use client";
+
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { signUp } from "@/lib/auth/client";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { SignUpSchema, SignUpValues } from "./validate";
+import InputStartIcon from "../components/input-start-icon";
+import InputPasswordContainer from "../components/input-password";
+import { cn } from "@/lib/utils";
+import { AtSign, MailIcon, UserIcon } from "lucide-react";
+import { GenderRadioGroup } from "../components/gender-radio-group";
+
+export default function SignUpForm() {
+  const [isPending, startTransition] = useTransition();
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(SignUpSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      username: "",
+      password: "",
+      confirmPassword: "",
+      gender: false
+    },
+  });
+
+  function onSubmit(data: SignUpValues) {
+    startTransition(async () => {
+      console.log("submit data:", data);
+      const response = await signUp.email(data);
+
+      if (response.error) {
+        console.log("SIGN_UP:", response.error.status);
+        toast.error(response.error.message);
+      } else {
+        redirect("/");
+      }
+    });
+  }
+
+  const getInputClassName = (fieldName: keyof SignUpValues) =>
+    cn(
+      form.formState.errors[fieldName] &&
+        "border-destructive/80 text-destructive focus-visible:border-destructive/80 focus-visible:ring-destructive/20",
+    );
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="z-50 my-8 flex w-full flex-col gap-5"
+      >
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputStartIcon icon={UserIcon}>
+                  <Input
+                    placeholder="Name"
+                    className={cn("peer ps-9", getInputClassName("name"))}
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputStartIcon>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputStartIcon icon={MailIcon}>
+                  <Input
+                    placeholder="Email"
+                    className={cn("peer ps-9", getInputClassName("email"))}
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputStartIcon>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputStartIcon icon={AtSign}>
+                  <Input
+                    placeholder="Username"
+                    className={cn("peer ps-9", getInputClassName("username"))}
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputStartIcon>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputPasswordContainer>
+                  <Input
+                    className={cn("pe-9", getInputClassName("password"))}
+                    placeholder="Password"
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputPasswordContainer>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <InputPasswordContainer>
+                  <Input
+                    className={cn("pe-9", getInputClassName("confirmPassword"))}
+                    placeholder="Confirm Password"
+                    disabled={isPending}
+                    {...field}
+                  />
+                </InputPasswordContainer>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Gender */}
+        <FormField
+          control={form.control}
+          name="gender"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Gender</FormLabel>
+              <GenderRadioGroup
+                value={field.value}
+                onChange={field.onChange}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isPending} className="mt-5 w-full">
+          Sign Up
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+
+# File: src/app/(routes)/(auth)/signup/page.tsx
+
+import { type Metadata } from "next";
+import Link from "next/link";
+import SignUpForm from "./form";
+
+export const metadata: Metadata = {
+  title: "Sign Up",
+};
+
+export default function SignUpPage() {
+  return (
+    <div className="flex min-h-screen w-full flex-col items-center justify-center p-10">
+      <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Create an account
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Join Landil today and be a smarter dealmaker.
+          </p>
+        </div>
+
+        <SignUpForm />
+
+        <div className="flex items-center justify-center gap-2">
+          <small>Already have an account?</small>
+          <Link href="/signin" className="text-sm font-bold leading-none">
+            Sign In
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+# File: src/app/(routes)/(auth)/signup/validate.ts
+
+import { passwordSchema } from "@/lib/auth/password";
+import { restrictedUsernames } from "@/lib/auth/usernames";
+import { z } from "zod";
+
+export const SignUpSchema = z
+  .object({
+    email: z
+    .email({ message: "Invalid email address" })
+    .min(1, { message: "Email is required" }),
+    name: z.string().min(4, { message: "Must be at least 4 characters" }),
+    username: z
+    .string()
+    .min(4, { message: "Must be at least 4 characters" })
+    .regex(/^[a-zA-Z0-9]+$/, "Only letters and numbers allowed")
+    .refine(
+      (username) => {
+        for (const pattern of restrictedUsernames) {
+          if (username.toLowerCase().includes(pattern)) {
+            return false;
+          }
+        }
+        return true;
+      },
+      { message: "Username contains disallowed words" }
+    ),
+    password: passwordSchema,
+    confirmPassword: z.string().min(8, {
+      message: "Must be at least 8 characters",
+    }),
+    gender: z.boolean().nonoptional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+export type SignUpValues = z.infer<typeof SignUpSchema>;
+
+
+# File: src/app/(routes)/(home)/page.tsx
+
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link";
+import SignOutButton from "../(auth)/components/button-signout";
+import { getServerSession } from "@/lib/auth/get-session";
+
+export default async function Home() {
+  const me = await getServerSession();
+
+  return (
+    <div className="grid min-h-screen grid-rows-[20px_1fr_20px] items-center justify-items-center gap-16 p-8 pb-20 font-[family-name:var(--font-geist-sans)] sm:p-20">
+      <main className="row-start-2 flex flex-col items-center gap-8 sm:items-start">
+        <Image
+          className="dark:invert"
+          src="/next.svg"
+          alt="Next.js logo"
+          width={180}
+          height={38}
+          priority
+        />
+        <ol className="list-inside list-decimal text-center font-[family-name:var(--font-geist-mono)] text-sm sm:text-left">
+          <li className="mb-2">
+            Get started by editing{" "}
+            <code className="rounded bg-black/[.05] px-1 py-0.5 font-semibold dark:bg-white/[.06]">
+              src/app/page.tsx
+            </code>
+            .
+          </li>
+          <li>Save and see your changes instantly.</li>
+        </ol>
+
+        <div className="flex flex-col items-center gap-4 sm:flex-row">
+          <a
+            className="flex h-10 items-center justify-center gap-2 rounded-full border border-solid border-transparent bg-foreground px-4 text-sm text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] sm:h-12 sm:px-5 sm:text-base"
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className="dark:invert"
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={20}
+              height={20}
+            />
+            Deploy now
+          </a>
+          <a
+            className="flex h-10 items-center justify-center rounded-full border border-solid border-black/[.08] px-4 text-sm transition-colors hover:border-transparent hover:bg-[#f2f2f2] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] sm:h-12 sm:min-w-44 sm:px-5 sm:text-base"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Read our docs
+          </a>
+        </div>
+        {me ? (
+          <div className="flex w-full flex-col gap-5">
+            <h2>Hi, {me.user.name}</h2>
+            <p>{me.user.email}</p>
+            <SignOutButton />
+          </div>
+        ) : (
+          <Link
+            href={"/signin"}
+            className={cn(buttonVariants({ variant: "default" }))}
+          >
+            Sign In
+          </Link>
+        )}
+      </main>
+      <footer className="row-start-3 flex flex-wrap items-center justify-center gap-6">
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/file.svg"
+            alt="File icon"
+            width={16}
+            height={16}
+          />
+          Learn
+        </a>
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/window.svg"
+            alt="Window icon"
+            width={16}
+            height={16}
+          />
+          Examples
+        </a>
+        <a
+          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
+          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Image
+            aria-hidden
+            src="/globe.svg"
+            alt="Globe icon"
+            width={16}
+            height={16}
+          />
+          Go to nextjs.org →
+        </a>
+      </footer>
+    </div>
+  );
+}
+
+
+# File: src/app/api/auth/[...all]/route.ts
+
+import { auth } from "@/lib/auth/server";
+import { toNextJsHandler } from "better-auth/next-js";
+
+export const { POST, GET } = toNextJsHandler(auth);
+
+
+# File: src/app/globals.css
+
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+
+# File: src/app/layout.tsx
+
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+import Providers from "@/providers";
+
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+
+
+# File: src/components/ui/button.tsx
+
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  {
+    variants: {
+      variant: {
+        default:
+          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
+        outline:
+          "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
+        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        icon: "size-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean
+  }) {
+  const Comp = asChild ? Slot : "button"
+
+  return (
+    <Comp
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, buttonVariants }
+
+
+# File: src/components/ui/form.tsx
+
+"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+import { Slot } from "@radix-ui/react-slot"
+import {
+  Controller,
+  ControllerProps,
+  FieldPath,
+  FieldValues,
+  FormProvider,
+  useFormContext,
+  useFormState,
+} from "react-hook-form"
+
+import { cn } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+
+const Form = FormProvider
+
+type FormFieldContextValue<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+> = {
+  name: TName
+}
+
+const FormFieldContext = React.createContext<FormFieldContextValue>(
+  {} as FormFieldContextValue
+)
+
+const FormField = <
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({
+  ...props
+}: ControllerProps<TFieldValues, TName>) => {
+  return (
+    <FormFieldContext.Provider value={{ name: props.name }}>
+      <Controller {...props} />
+    </FormFieldContext.Provider>
+  )
+}
+
+const useFormField = () => {
+  const fieldContext = React.useContext(FormFieldContext)
+  const itemContext = React.useContext(FormItemContext)
+  const { getFieldState } = useFormContext()
+  const formState = useFormState({ name: fieldContext.name })
+  const fieldState = getFieldState(fieldContext.name, formState)
+
+  if (!fieldContext) {
+    throw new Error("useFormField should be used within <FormField>")
+  }
+
+  const { id } = itemContext
+
+  return {
+    id,
+    name: fieldContext.name,
+    formItemId: `${id}-form-item`,
+    formDescriptionId: `${id}-form-item-description`,
+    formMessageId: `${id}-form-item-message`,
+    ...fieldState,
+  }
+}
+
+type FormItemContextValue = {
+  id: string
+}
+
+const FormItemContext = React.createContext<FormItemContextValue>(
+  {} as FormItemContextValue
+)
+
+function FormItem({ className, ...props }: React.ComponentProps<"div">) {
+  const id = React.useId()
+
+  return (
+    <FormItemContext.Provider value={{ id }}>
+      <div
+        data-slot="form-item"
+        className={cn("grid gap-2", className)}
+        {...props}
+      />
+    </FormItemContext.Provider>
+  )
+}
+
+function FormLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+  const { error, formItemId } = useFormField()
+
+  return (
+    <Label
+      data-slot="form-label"
+      data-error={!!error}
+      className={cn("data-[error=true]:text-destructive-foreground", className)}
+      htmlFor={formItemId}
+      {...props}
+    />
+  )
+}
+
+function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+
+  return (
+    <Slot
+      data-slot="form-control"
+      id={formItemId}
+      aria-describedby={
+        !error
+          ? `${formDescriptionId}`
+          : `${formDescriptionId} ${formMessageId}`
+      }
+      aria-invalid={!!error}
+      {...props}
+    />
+  )
+}
+
+function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
+  const { formDescriptionId } = useFormField()
+
+  return (
+    <p
+      data-slot="form-description"
+      id={formDescriptionId}
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  )
+}
+
+function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
+  const { error, formMessageId } = useFormField()
+  const body = error ? String(error?.message ?? "") : props.children
+
+  if (!body) {
+    return null
+  }
+
+  return (
+    <p
+      data-slot="form-message"
+      id={formMessageId}
+      className={cn("text-destructive-foreground text-sm", className)}
+      {...props}
+    >
+      {body}
+    </p>
+  )
+}
+
+export {
+  useFormField,
+  Form,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+  FormField,
+}
+
+
+# File: src/components/ui/input.tsx
+
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        "border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Input }
+
+
+# File: src/components/ui/label.tsx
+
+"use client"
+
+import * as React from "react"
+import * as LabelPrimitive from "@radix-ui/react-label"
+
+import { cn } from "@/lib/utils"
+
+function Label({
+  className,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+  return (
+    <LabelPrimitive.Root
+      data-slot="label"
+      className={cn(
+        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Label }
+
+
+# File: src/components/ui/radio-group.tsx
+
+"use client"
+
+import * as React from "react"
+import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
+import { CircleIcon } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+
+function RadioGroup({
+  className,
+  ...props
+}: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+  return (
+    <RadioGroupPrimitive.Root
+      data-slot="radio-group"
+      className={cn("grid gap-3", className)}
+      {...props}
+    />
+  )
+}
+
+function RadioGroupItem({
+  className,
+  ...props
+}: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
+  return (
+    <RadioGroupPrimitive.Item
+      data-slot="radio-group-item"
+      className={cn(
+        "border-input text-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive aspect-square size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
+    >
+      <RadioGroupPrimitive.Indicator
+        data-slot="radio-group-indicator"
+        className="relative flex items-center justify-center"
+      >
+        <CircleIcon className="fill-primary absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
+      </RadioGroupPrimitive.Indicator>
+    </RadioGroupPrimitive.Item>
+  )
+}
+
+export { RadioGroup, RadioGroupItem }
+
+
+# File: src/components/ui/sonner.tsx
+
+"use client"
+
+import { useTheme } from "next-themes"
+import { Toaster as Sonner, ToasterProps } from "sonner"
+
+const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme = "system" } = useTheme()
+
+  return (
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground font-medium",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground font-medium",
+        },
+      }}
+      {...props}
+    />
+  )
+}
+
+export { Toaster }
+
+
+# File: src/db/schema/auth/account.ts
+
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { user } from "..";
+
+export const account = pgTable("account", {
+  id: text("id").primaryKey(),
+  accountId: text("accountId").notNull(),
+  providerId: text("providerId").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id),
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  idToken: text("idToken"),
+  accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
+  refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+}).enableRLS();
+
+
+# File: src/db/schema/auth/index.ts
+
+export * from "./account";
+export * from "./session";
+export * from "./user";
+export * from "./verification";
+
+
+# File: src/db/schema/auth/session.ts
+
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { user } from "..";
+
+export const session = pgTable("session", {
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id),
+}).enableRLS();
+
+
+# File: src/db/schema/auth/user.ts
+
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  username: text("username").unique(),
+  displayUsername: text("display_username"),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("emailVerified").notNull(),
+  image: text("image"),
+  role: text("role").default("member").notNull(),
+  gender: boolean("gender").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+}).enableRLS();
+
+export type UserType = typeof user.$inferSelect;
+
+
+# File: src/db/schema/auth/verification.ts
+
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export const verification = pgTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+}).enableRLS();
+
+
+# File: src/db/schema/index.ts
+
+export * from "./auth"
+
+
+# File: src/db/index.ts
+
+import * as schema from "./schema";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+
+const client = postgres(process.env.DATABASE_URL!);
+export const db = drizzle(client, { schema });
+
+
+# File: src/lib/auth/client.ts
+
+import { createAuthClient } from "better-auth/react";
+import { usernameClient } from "better-auth/client/plugins";
+import { nextCookies } from "better-auth/next-js";
+
+export const { signIn, signUp, signOut, useSession, getSession } =
+  createAuthClient({
+    baseURL: process.env.NEXT_PUBLIC_BASE_URL!,
+    emailAndPassword: {
+      enabled: true,
+    },
+    plugins: [usernameClient(), nextCookies()],
+  });
+
+
+# File: src/lib/auth/get-session.ts
+
+import { headers } from "next/headers";
+import { cache } from "react";
+import { auth } from "./server";
+
+export const getServerSession = cache(async () => {
+  return await auth.api.getSession({ headers: await headers() });
+});
+
+
+# File: src/lib/auth/password.ts
+
+import z from "zod/v4";
+
+export const passwordSchema = z
+  .string()
+  .min(8, {
+    message: "Password must be at least 8 characters long.",
+  })
+  .regex(/[A-Z]/, {
+    message: "Password must contain at least one uppercase letter.",
+  })
+  .regex(/[a-z]/, {
+    message: "Password must contain at least one lowercase letter.",
+  })
+  .regex(/[0-9]/, {
+    message: "Password must contain at least one number.",
+  })
+  .regex(/[^A-Za-z0-9]/, {
+    message: "Password must contain at least one symbol.",
+  });
+
+
+# File: src/lib/auth/server.ts
+
+import { db } from "@/db";
+import { betterAuth } from "better-auth";
+import { username } from "better-auth/plugins";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { restrictedUsernames } from "./usernames";
+
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg",
+  }),
+  plugins: [username({
+    minUsernameLength: 4,
+      maxUsernameLength: 10,
+      usernameValidator: (value) => !restrictedUsernames.includes(value),
+      usernameNormalization: (value) => value.toLowerCase(),
+  })],
+  emailAndPassword: {
+    enabled: true,
+  },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        defaultValue: "user",
+        required: false,
+        input: false,
+      },
+      gender: {
+        type: "boolean",
+        required: true,
+        input: true,
+      },
+    },
+  },
+});
+
+
+# File: src/lib/auth/usernames.ts
+
+export const restrictedUsernames = [
+  "admin",
+  "administrator",
+  "root",
+  "superadmin",
+  "system",
+  "null",
+  "undefined",
+  "support",
+  "help",
+  "contact",
+  "info",
+  "official",
+  "owner",
+  "moderator",
+  "mod",
+  "staff",
+  "team",
+  "server",
+  "api",
+  "email",
+  "security",
+  "test",
+  "user",
+  "users",
+  "username",
+  "guest",
+  "webmaster",
+  "manager",
+  "operator",
+  "dev",
+  "developer",
+  "emasaji",
+  "me",
+  "you",
+  "bot",
+  "god",
+  "jesus",
+  "allah",
+  "cakfan",
+];
+
+
+# File: src/lib/utils.ts
+
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+
+# File: src/providers/index.tsx
+
+import { Toaster } from "@/components/ui/sonner";
+import NextTopLoader from "nextjs-toploader";
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <NextTopLoader easing="ease" showSpinner={false} color="var(--primary)" />
+      {children}
+      <Toaster position="top-center" />
+    </>
+  );
+}
+
+
+# File: src/proxy.ts
+
+import { NextResponse, type NextRequest } from "next/server";
+import { getSessionCookie } from "better-auth/cookies";
+
+import {
+  apiAuthPrefix,
+  authRoutes,
+  DEFAULT_LOGIN_REDIRECT,
+  publicRoutes,
+} from "./routes";
+
+export async function proxy(request: NextRequest) {
+  const session = getSessionCookie(request);
+
+  const isApiAuth = request.nextUrl.pathname.startsWith(apiAuthPrefix);
+
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
+
+  const isAuthRoute = () => {
+    return authRoutes.some((path) => request.nextUrl.pathname.startsWith(path));
+  };
+
+  if (isApiAuth) {
+    return NextResponse.next();
+  }
+
+  if (isAuthRoute()) {
+    if (session) {
+      return NextResponse.redirect(
+        new URL(DEFAULT_LOGIN_REDIRECT, request.url),
+      );
+    }
+    return NextResponse.next();
+  }
+
+  if (!session && !isPublicRoute) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
+
+
+# File: src/routes.ts
+
+export const publicRoutes: string[] = ["/", "/about"];
+
+export const authRoutes: string[] = ["/signin", "/signup", "/forgot-password"];
+
+export const apiAuthPrefix: string = "/api/auth";
+
+export const DEFAULT_LOGIN_REDIRECT: string = "/";
+
+
+# File: package.json
+
+{
+  "name": "nextjs-15",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-radio-group": "^1.3.8",
+    "@radix-ui/react-slot": "^1.2.3",
+    "better-auth": "^1.3.32",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-zod": "^0.8.3",
+    "lucide-react": "^0.548.0",
+    "next": "^16.0.0",
+    "next-themes": "^0.4.6",
+    "nextjs-toploader": "^3.9.17",
+    "postgres": "^3.4.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.65.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.5",
+    "eslint": "^9",
+    "eslint-config-next": "^16.0.0",
+    "postcss": "^8",
+    "prettier-plugin-tailwindcss": "^0.7.1",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5"
+  }
+}
