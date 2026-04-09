@@ -15,9 +15,9 @@ The user provided inline text rather than a file path. I'll apply the compressio
 - [ ] Valuation panel — zonal price + market trends (pro only)
 
 ## User profiles
-- [ ] Public profile page (/u/[username]) — name, avatar, posted listings
-- [ ] Verified seller badge (manual flag in DB, shown on profile + listings)
-- [ ] Contact info (shown to authenticated users only)
+- [x] Public profile page (/u/[username]) — name, avatar, posted listings
+- [x] Verified seller badge (manual flag in DB, shown on profile + listings)
+- [x] Contact info (shown to authenticated users only)
 
 ## Freemium – Seller tiers
 
