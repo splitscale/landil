@@ -1,5 +1,8 @@
-import Navbar from "@/app/(routes)/(home)/components/navbar";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { getServerSession } from "@/lib/auth/get-session";
+import AppSidebar from "@/app/(routes)/(home)/components/app-sidebar";
 
 export default async function HomeLayout({
   children,
@@ -7,11 +10,37 @@ export default async function HomeLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession();
+  const user = session?.user ?? null;
+
+  if (!user) {
+    return (
+      <>
+        <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
+          <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+            <Link href="/" className="text-sm font-semibold tracking-tight">
+              Landil
+            </Link>
+            <Link href="/signin" className={buttonVariants({ variant: "default", size: "sm" })}>
+              Sign in
+            </Link>
+          </div>
+        </header>
+        <main>{children}</main>
+      </>
+    );
+  }
 
   return (
-    <>
-      <Navbar user={session?.user ?? null} />
-      <main>{children}</main>
-    </>
+    <SidebarProvider>
+      <AppSidebar user={user} />
+      <SidebarInset>
+        {/* Mobile top bar with toggle */}
+        <header className="flex h-12 items-center gap-2 border-b border-border px-4 md:hidden">
+          <SidebarTrigger />
+          <span className="text-sm font-semibold tracking-tight">Landil</span>
+        </header>
+        <main className="flex-1">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
