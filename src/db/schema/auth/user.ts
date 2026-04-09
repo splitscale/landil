@@ -11,6 +11,7 @@ export const user = pgTable("user", {
   role: text("role").default("member").notNull(),
   gender: boolean("gender").notNull(),
   verified: boolean("verified").default(false).notNull(),
+  plan: text("plan", { enum: ["free", "pro"] }).default("free").notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
