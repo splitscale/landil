@@ -11,7 +11,6 @@ import {
   IconListDetails,
   IconLogout,
   IconSettings,
-  IconUserCircle,
   IconBuildingStore,
 } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -100,10 +99,6 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.image ?? undefined} alt={user.name} />
-                  <AvatarFallback className="rounded-lg text-xs">{initials(user.name)}</AvatarFallback>
-                </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs text-muted-foreground">{user.email}</span>
@@ -114,14 +109,6 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              {user.username && (
-                <DropdownMenuItem asChild>
-                  <Link href={`/u/${user.username}`}>
-                    <IconUserCircle className="size-4" />
-                    My profile
-                  </Link>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onSelect={onSettingsOpen}>
                 <IconSettings className="size-4" />
                 Settings
