@@ -1,7 +1,9 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgSchema, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { user } from "../auth/user";
 
-export const listing = pgTable("listing", {
+export const listingsSchema = pgSchema("listings");
+
+export const listing = listingsSchema.table("listing", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 

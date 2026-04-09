@@ -1,7 +1,7 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { listing } from "./listing";
+import { text, timestamp } from "drizzle-orm/pg-core";
+import { listingsSchema, listing } from "./listing";
 
-export const listingDoc = pgTable("listing_doc", {
+export const listingDoc = listingsSchema.table("listing_doc", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   listingId: text("listing_id").notNull().references(() => listing.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
