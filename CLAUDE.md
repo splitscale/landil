@@ -1,6 +1,10 @@
+Here is the compressed version:
+
+---
+
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) in this repo.
 
 ## Commands
 
@@ -14,15 +18,15 @@ bun db:migrate   # push schema to DB (drizzle-kit push)
 bun db:studio    # open Drizzle Studio
 ```
 
-There are no tests in this project.
+No tests.
 
 ## Environment
 
-Copy `env.example` to `.env`. Required variables:
+Copy `env.example` to `.env`. Required vars:
 
-- `DATABASE_URL` — Supabase pooled connection (used at runtime via `postgres-js`)
-- `DIRECT_URL` — Supabase direct connection (used only by `drizzle-kit` for migrations)
-- `BETTER_AUTH_SECRET` — secret for Better Auth session signing
+- `DATABASE_URL` — Supabase pooled conn (runtime via `postgres-js`)
+- `DIRECT_URL` — Supabase direct conn (`drizzle-kit` migrations only)
+- `BETTER_AUTH_SECRET` — Better Auth session signing secret
 - `NEXT_PUBLIC_BASE_URL` — base URL (e.g. `http://localhost:3000`)
 
 ## Architecture
@@ -58,23 +62,23 @@ src/
 
 ### Auth pattern
 
-- **Server components/API routes:** `getServerSession()` from `@/lib/auth/get-session` — returns null when unauthenticated.
+- **Server components/API routes:** `getServerSession()` from `@/lib/auth/get-session` — null if unauthenticated.
 - **Client components:** `useSession()` or `signIn/signOut` from `@/lib/auth/client`.
-- **Middleware** (`proxy.ts`, imported by `middleware.ts`): uses `getSessionCookie()` for lightweight cookie checks without a DB call. Route classification is in `src/routes.ts`.
-- Better Auth manages its own DB tables under `src/db/schema/auth/`. The user table has two custom fields: `role` (string, default `"user"`) and `gender` (boolean).
+- **Middleware** (`proxy.ts`, imported by `middleware.ts`): uses `getSessionCookie()` for lightweight cookie check, no DB call. Route classification in `src/routes.ts`.
+- Better Auth manages DB tables under `src/db/schema/auth/`. User table custom fields: `role` (string, default `"user"`), `gender` (boolean).
 
 ### Adding a new route
 
-Protected routes are the default — redirect to `/login` for unauthenticated users is handled by middleware. Add routes to `publicRoutes` or `authRoutes` in `src/routes.ts` only when they must be publicly accessible or auth-only (signin/signup).
+Protected routes default — middleware redirects unauthenticated to `/login`. Add to `publicRoutes` or `authRoutes` in `src/routes.ts` only if must be public or auth-only (signin/signup).
 
 ### DB schema changes
 
-Add new schema files under `src/db/schema/`, export them from `src/db/schema/index.ts`, then run `bun db:migrate`. The `drizzle.config.ts` uses `DIRECT_URL` (not `DATABASE_URL`) for migrations.
+Add schema files under `src/db/schema/`, export from `src/db/schema/index.ts`, run `bun db:migrate`. `drizzle.config.ts` uses `DIRECT_URL` (not `DATABASE_URL`) for migrations.
 
 ### Form pattern
 
-Multi-step forms use React Hook Form + Zod. Schema and option constants live in a co-located `validate.ts`. Server actions aren't used — forms POST to API routes under `src/app/api/`.
+Multi-step forms: React Hook Form + Zod. Schema/constants in co-located `validate.ts`. No server actions — forms POST to API routes under `src/app/api/`.
 
 ### Listings (in progress — branch `file-uploads`)
 
-`/api/listings` POST currently logs the payload; file upload and DB insert are TODO. The form collects photos (up to 20) and documents with public/private visibility, but files aren't yet sent to the API — only counts are.
+`/api/listings` POST logs payload; file upload + DB insert TODO. Form collects photos (up to 20) + docs with public/private visibility, but only counts sent to API (not files).
