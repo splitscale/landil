@@ -3,7 +3,8 @@ import Link from "next/link";
 import SignUpForm from "./form";
 
 export const metadata: Metadata = {
-  title: "Sign Up",
+  title: "Create Account",
+  description: "Join Landil to buy or sell land in the Philippines with title checks, zonal value data, and aggregated market bids.",
 };
 
 export default function SignUpPage() {

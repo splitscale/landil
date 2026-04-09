@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth/get-session";
 import NewListingForm from "@/app/(routes)/(home)/listings/new/form";
 
-export const metadata: Metadata = { title: "New Listing" };
+export const metadata: Metadata = {
+  title: "New Listing",
+  description: "List your land or property on Landil. Add photos, documents, title details, and set your asking price.",
+};
 
 export default async function NewListingPage() {
   const session = await getServerSession();

@@ -1,9 +1,15 @@
+import { type Metadata } from "next";
 import { getServerSession } from "@/lib/auth/get-session";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { LayoutList } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Manage your land listings, review bids, and track due diligence from your Landil dashboard.",
+};
 
 export default async function Home() {
   const me = await getServerSession();

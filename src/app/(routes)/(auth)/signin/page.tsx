@@ -4,6 +4,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Sign In",
+  description: "Sign in to your Landil account to access land listings, due diligence tools, and market data.",
 };
 
 export default function SignInPage() {
