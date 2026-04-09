@@ -7,6 +7,7 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DIRECT_URL!,
   },
+  schemaFilter: ["public", "listings"],
   verbose: true,
   strict: true,
 });
