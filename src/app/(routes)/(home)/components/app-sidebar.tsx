@@ -4,11 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth/client";
-import { cn } from "@/lib/utils";
 import {
-  Home, LayoutList, LogOut, Settings, BadgeCheck,
-} from "lucide-react";
+  IconCirclePlusFilled,
+  IconDashboard,
+  IconDotsVertical,
+  IconListDetails,
+  IconLogout,
+  IconSettings,
+  IconUserCircle,
+  IconBuildingStore,
+} from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -19,16 +34,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import SettingsDialog from "./settings-dialog";
 
 type SidebarUser = {
@@ -44,16 +51,20 @@ function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/listings/new", label: "New listing", icon: LayoutList },
+const NAV_MAIN = [
+  { title: "Dashboard", href: "/", icon: IconDashboard },
+  { title: "My listings", href: "/listings", icon: IconListDetails },
+  { title: "Browse", href: "/browse", icon: IconBuildingStore },
 ];
 
-export default function AppSidebar({ user }: { user: SidebarUser }) {
-  const pathname = usePathname();
+const NAV_SECONDARY = [
+  { title: "Settings", icon: IconSettings },
+];
+
+function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: () => void }) {
+  const { isMobile } = useSidebar();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -61,28 +72,126 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
   };
 
   return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                <AvatarFallback className="rounded-lg text-xs">{initials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+              </div>
+              <IconDotsVertical className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            side={isMobile ? "bottom" : "right"}
+            align="end"
+            sideOffset={4}
+          >
+            <DropdownMenuLabel className="p-0 font-normal">
+              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                <Avatar className="h-8 w-8 rounded-lg">
+                  <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                  <AvatarFallback className="rounded-lg text-xs">{initials(user.name)}</AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                </div>
+              </div>
+            </DropdownMenuLabel>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              {user.username && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/u/${user.username}`}>
+                    <IconUserCircle className="size-4" />
+                    My profile
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={onSettingsOpen}>
+                <IconSettings className="size-4" />
+                Settings
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onSelect={handleSignOut}
+              disabled={signingOut}
+              className="text-destructive focus:text-destructive"
+            >
+              <IconLogout className="size-4" />
+              {signingOut ? "Signing out…" : "Sign out"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
+
+export default function AppSidebar({ user }: { user: SidebarUser }) {
+  const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  return (
     <>
-      <Sidebar>
+      <Sidebar collapsible="offcanvas">
         {/* Brand */}
-        <SidebarHeader className="px-4 py-3">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
-            Landil
-          </Link>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
+                <Link href="/">
+                  <span className="text-base font-semibold">Landil</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarSeparator />
-
-        {/* Nav */}
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupContent>
+            <SidebarGroupContent className="flex flex-col gap-2">
+              {/* Primary CTA */}
               <SidebarMenu>
-                {NAV.map(({ href, label, icon: Icon }) => (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="New listing"
+                    className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                  >
+                    <Link href="/listings/new">
+                      <IconCirclePlusFilled />
+                      <span>New listing</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+
+              {/* Nav items */}
+              <SidebarMenu>
+                {NAV_MAIN.map(({ title, href, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
-                    <SidebarMenuButton asChild isActive={pathname === href}>
+                    <SidebarMenuButton asChild tooltip={title} isActive={pathname === href}>
                       <Link href={href}>
-                        <Icon size={15} />
-                        {label}
+                        <Icon />
+                        <span>{title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -92,64 +201,8 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
           </SidebarGroup>
         </SidebarContent>
 
-        {/* User footer */}
-        <SidebarFooter className="p-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarImage src={user.image ?? undefined} alt={user.name} />
-                  <AvatarFallback className="text-[10px]">{initials(user.name)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium leading-none">{user.name}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{user.email}</p>
-                </div>
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent side="top" align="start" className="w-56 mb-1">
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={user.image ?? undefined} alt={user.name} />
-                    <AvatarFallback className="text-xs">{initials(user.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="grid min-w-0 flex-1">
-                    <span className="truncate text-sm font-medium">{user.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
-              {user.username && (
-                <DropdownMenuItem asChild>
-                  <Link href={`/u/${user.username}`}>
-                    <BadgeCheck size={14} />
-                    My profile
-                  </Link>
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
-                <Settings size={14} />
-                Settings
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onSelect={handleSignOut}
-                disabled={signingOut}
-                className="text-destructive focus:text-destructive"
-              >
-                <LogOut size={14} />
-                {signingOut ? "Signing out…" : "Sign out"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <SidebarFooter>
+          <NavUser user={user} onSettingsOpen={() => setSettingsOpen(true)} />
         </SidebarFooter>
       </Sidebar>
 

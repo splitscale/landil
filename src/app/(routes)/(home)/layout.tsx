@@ -34,10 +34,8 @@ export default async function HomeLayout({
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset>
-        {/* Mobile top bar with toggle */}
-        <header className="flex h-12 items-center gap-2 border-b border-border px-4 md:hidden">
-          <SidebarTrigger />
-          <span className="text-sm font-semibold tracking-tight">Landil</span>
+        <header className="flex h-12 items-center gap-2 border-b border-border px-4">
+          <SidebarTrigger className="-ml-1" />
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>
