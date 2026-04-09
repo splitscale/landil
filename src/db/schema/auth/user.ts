@@ -10,6 +10,7 @@ export const user = pgTable("user", {
   image: text("image"),
   role: text("role").default("member").notNull(),
   gender: boolean("gender").notNull(),
+  verified: boolean("verified").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
