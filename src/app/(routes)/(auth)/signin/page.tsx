@@ -10,12 +10,21 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center">
       <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
-        <h1>Sign In</h1>
-        <p>Example sign in page using Better Auth</p>
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Welcome back
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Good to see you again. Sign in to continue to Landil.
+          </p>
+        </div>
+
         <SignInForm />
+
         <div className="flex items-center justify-center gap-2">
-          <small>Don&apos;t have account?</small>
-          <Link href={"/signup"} className="text-sm font-bold leading-none">
+          <small>Don&apos;t have an account?</small>
+          <Link href="/signup" className="text-sm font-bold leading-none">
             Sign Up
           </Link>
         </div>
