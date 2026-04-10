@@ -8,8 +8,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("emailVerified").notNull(),
   image: text("image"),
-  role: text("role").default("member").notNull(),
+  role: text("role", { enum: ["admin", "seller", "buyer"] }).default("buyer").notNull(),
   gender: boolean("gender").notNull(),
+  verified: boolean("verified").default(false).notNull(),
+  plan: text("plan", { enum: ["free", "pro"] }).default("free").notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()

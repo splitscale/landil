@@ -1,0 +1,54 @@
+The user provided inline text rather than a file path. I'll apply the compression rules directly.
+
+# Landil – Build Checklist
+
+## Buyer side
+- [ ] Listing detail page (photos, specs, title info, docs)
+- [ ] Title / LRA check display
+- [ ] BIR zonal value lookup + tax simulator
+- [ ] Comparable listings (comps) view
+- [ ] Make offer flow
+
+## Seller side
+- [x] Listings dashboard (all listings, status)
+- [x] Bids/offers inbox per listing (pro only)
+- [ ] Valuation panel — zonal price + market trends (pro only)
+
+## User profiles
+- [x] Public profile page (/u/[username]) — name, avatar, posted listings
+- [x] Verified seller badge (manual flag in DB, shown on profile + listings)
+- [x] Contact info (shown to authenticated users only)
+
+## Freemium – Seller tiers
+
+### DB / Auth
+- [x] Add `plan` field to user (free | pro) with default "free"
+- [x] Add listing count check (query-based, cap at 3 for free)
+
+### Limits (free tier)
+- [x] Block listing creation if over free cap
+- [ ] Lock private doc visibility to pro sellers only
+- [x] Gate offers/bids inbox behind upgrade prompt
+- [ ] Gate valuation tools behind upgrade prompt
+- [ ] Gate verified seller badge eligibility to pro
+
+### Upgrade flow
+- [x] Upgrade prompt UI (shown at gated features)
+- [ ] Payment integration (PayMongo for PH)
+- [ ] Webhook to flip user.plan to pro on payment success
+- [ ] Plan badge on seller profile
+
+### Admin
+- [x] Manual plan override (admin panel)
+
+## Shared
+- [ ] Listing search / browse page (public-facing)
+- [ ] Verified registry badge (manual or automated verification)
+- [ ] Offer negotiation thread (buyer ↔ seller messaging)
+
+## Done
+- [x] Listing creation form (photos, docs, property specs, title details)
+- [x] File uploads (UploadThing, compressed, CDN-verified)
+- [x] Auth (sign in, sign up, sessions)
+- [x] DB schema (listing, listing_photo, listing_doc)
+- [x] SEO metadata and tab titles
