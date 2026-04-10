@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { getServerSession } from "@/lib/auth/get-session";
 import AppSidebar from "@/app/(routes)/(home)/components/app-sidebar";
+import ImpersonationBanner from "@/app/(routes)/(home)/components/impersonation-banner";
 
 export default async function HomeLayout({
   children,
@@ -30,10 +31,13 @@ export default async function HomeLayout({
     );
   }
 
+  const isImpersonating = !!(session as { session?: { impersonatedBy?: string } } | null)?.session?.impersonatedBy;
+
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset>
+        {isImpersonating && <ImpersonationBanner impersonatedName={user.name} />}
         <header className="flex h-12 items-center gap-2 border-b border-border px-4">
           <SidebarTrigger className="-ml-1" />
         </header>
