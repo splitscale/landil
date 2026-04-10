@@ -35,10 +35,11 @@ export default async function HomeLayout({
   const isImpersonating = !!(session as { session?: { impersonatedBy?: string } } | null)?.session?.impersonatedBy;
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} isImpersonating={isImpersonating} />
+    <>
+      {isImpersonating && <ImpersonationBanner impersonatedName={user.name} />}
+      <SidebarProvider>
+      <AppSidebar user={user} />
       <SidebarInset>
-        {isImpersonating && <ImpersonationBanner impersonatedName={user.name} />}
         <header className="flex h-12 items-center gap-2 border-b border-border px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="h-4 w-px bg-border" />
@@ -47,5 +48,6 @@ export default async function HomeLayout({
         <main className="flex-1">{children}</main>
       </SidebarInset>
     </SidebarProvider>
+    </>
   );
 }
