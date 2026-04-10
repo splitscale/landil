@@ -35,13 +35,14 @@ function DonutChart({ config, data }: { config: ChartConfig; data: NameValue[] }
 // ── Generic bar ──────────────────────────────────────────────────────────────
 
 function TimeSeriesBar({ config, data, dataKey }: { config: ChartConfig; data: DateCount[]; dataKey: string }) {
+  const color = config[dataKey]?.color ?? "var(--chart-1)";
   return (
     <ChartContainer config={config} className="h-[220px] w-full">
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
         <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} />
         <YAxis allowDecimals={false} tick={axisStyle} tickLine={false} axisLine={false} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar dataKey={dataKey} fill="var(--primary)" radius={[3, 3, 0, 0]} />
+        <Bar dataKey={dataKey} fill={color} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ChartContainer>
   );
@@ -50,18 +51,18 @@ function TimeSeriesBar({ config, data, dataKey }: { config: ChartConfig; data: D
 // ── Configured exports ───────────────────────────────────────────────────────
 
 const roleConfig: ChartConfig = {
-  buyer:  { label: "Buyers",  color: "var(--muted-foreground)" },
-  seller: { label: "Sellers", color: "var(--primary)" },
-  admin:  { label: "Admins",  color: "var(--destructive)" },
+  buyer:  { label: "Buyers",  color: "var(--chart-1)" },
+  seller: { label: "Sellers", color: "var(--chart-2)" },
+  admin:  { label: "Admins",  color: "var(--chart-3)" },
 };
 
 const statusConfig: ChartConfig = {
-  published: { label: "Published", color: "var(--primary)" },
-  draft:     { label: "Drafts",    color: "var(--muted-foreground)" },
+  published: { label: "Published", color: "var(--chart-1)" },
+  draft:     { label: "Drafts",    color: "var(--chart-4)" },
 };
 
-const signupsConfig: ChartConfig = { signups: { label: "Signups", color: "var(--primary)" } };
-const listingsConfig: ChartConfig = { listings: { label: "Listings", color: "var(--primary)" } };
+const signupsConfig: ChartConfig  = { signups:  { label: "Signups",  color: "var(--chart-1)" } };
+const listingsConfig: ChartConfig = { listings: { label: "Listings", color: "var(--chart-2)" } };
 
 export const RoleDonut   = ({ data }: { data: NameValue[] }) => <DonutChart config={roleConfig} data={data} />;
 export const StatusDonut = ({ data }: { data: NameValue[] }) => <DonutChart config={statusConfig} data={data} />;
