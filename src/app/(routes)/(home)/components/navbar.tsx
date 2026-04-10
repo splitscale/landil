@@ -77,7 +77,7 @@ export default function Navbar({ user }: { user: NavUser }) {
                 <DropdownMenuTrigger asChild>
                   <button className="rounded-full outline-none ring-ring ring-offset-2 ring-offset-background focus-visible:ring-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                      <AvatarImage src={user.image ? `${user.image}?u=${encodeURIComponent(user.email)}` : undefined} alt={user.name} />
                       <AvatarFallback className="text-xs">{initials(user.name)}</AvatarFallback>
                     </Avatar>
                   </button>
@@ -87,7 +87,7 @@ export default function Navbar({ user }: { user: NavUser }) {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-2 py-1.5">
                       <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                        <AvatarImage src={user.image ? `${user.image}?u=${encodeURIComponent(user.email)}` : undefined} alt={user.name} />
                         <AvatarFallback className="text-xs">{initials(user.name)}</AvatarFallback>
                       </Avatar>
                       <div className="grid min-w-0 flex-1">

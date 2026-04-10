@@ -84,7 +84,7 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                <AvatarImage src={user.image ? `${user.image}?u=${encodeURIComponent(user.email)}` : undefined} alt={user.name} />
                 <AvatarFallback className="rounded-lg text-xs">{initials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
