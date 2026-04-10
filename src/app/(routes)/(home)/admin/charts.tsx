@@ -8,8 +8,6 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
   Legend,
 } from "recharts";
 import {
@@ -21,12 +19,10 @@ import {
 
 // ── Role donut ──────────────────────────────────────────────────────────────
 
-const ROLE_COLORS = ["hsl(var(--primary))", "hsl(var(--muted-foreground))", "hsl(var(--destructive))"];
-
 const roleConfig: ChartConfig = {
-  buyer: { label: "Buyers" },
-  seller: { label: "Sellers" },
-  admin: { label: "Admins" },
+  buyer:  { label: "Buyers",  color: "var(--muted-foreground)" },
+  seller: { label: "Sellers", color: "var(--primary)" },
+  admin:  { label: "Admins",  color: "var(--destructive)" },
 };
 
 export function RoleDonut({ data }: { data: { name: string; value: number }[] }) {
@@ -35,11 +31,16 @@ export function RoleDonut({ data }: { data: { name: string; value: number }[] })
       <PieChart>
         <ChartTooltip content={<ChartTooltipContent hideLabel />} />
         <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={ROLE_COLORS[i % ROLE_COLORS.length]} />
+          {data.map((entry) => (
+            <Cell key={entry.name} fill={roleConfig[entry.name]?.color ?? "var(--muted-foreground)"} />
           ))}
         </Pie>
-        <Legend iconType="circle" iconSize={8} formatter={(v) => roleConfig[v]?.label ?? v} />
+        <Legend
+          iconType="circle"
+          iconSize={8}
+          formatter={(v) => roleConfig[v]?.label ?? v}
+          wrapperStyle={{ color: "var(--muted-foreground)", fontSize: 12 }}
+        />
       </PieChart>
     </ChartContainer>
   );
@@ -47,11 +48,9 @@ export function RoleDonut({ data }: { data: { name: string; value: number }[] })
 
 // ── Listing status donut ────────────────────────────────────────────────────
 
-const STATUS_COLORS = ["hsl(var(--primary))", "hsl(var(--muted-foreground))"];
-
 const statusConfig: ChartConfig = {
-  published: { label: "Published" },
-  draft: { label: "Drafts" },
+  published: { label: "Published", color: "var(--primary)" },
+  draft:     { label: "Drafts",    color: "var(--muted-foreground)" },
 };
 
 export function StatusDonut({ data }: { data: { name: string; value: number }[] }) {
@@ -60,30 +59,39 @@ export function StatusDonut({ data }: { data: { name: string; value: number }[] 
       <PieChart>
         <ChartTooltip content={<ChartTooltipContent hideLabel />} />
         <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={2}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
+          {data.map((entry) => (
+            <Cell key={entry.name} fill={statusConfig[entry.name]?.color ?? "var(--muted-foreground)"} />
           ))}
         </Pie>
-        <Legend iconType="circle" iconSize={8} formatter={(v) => statusConfig[v]?.label ?? v} />
+        <Legend
+          iconType="circle"
+          iconSize={8}
+          formatter={(v) => statusConfig[v]?.label ?? v}
+          wrapperStyle={{ color: "var(--muted-foreground)", fontSize: 12 }}
+        />
       </PieChart>
     </ChartContainer>
   );
 }
 
+// ── Shared axis props ────────────────────────────────────────────────────────
+
+const axisStyle = { fill: "var(--muted-foreground)", fontSize: 10 };
+
 // ── Signups bar chart ────────────────────────────────────────────────────────
 
 const signupsConfig: ChartConfig = {
-  signups: { label: "Signups" },
+  signups: { label: "Signups", color: "var(--primary)" },
 };
 
 export function SignupsBar({ data }: { data: { date: string; signups: number }[] }) {
   return (
     <ChartContainer config={signupsConfig} className="h-[220px] w-full">
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-        <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+        <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} />
+        <YAxis allowDecimals={false} tick={axisStyle} tickLine={false} axisLine={false} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar dataKey="signups" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="signups" fill="var(--primary)" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ChartContainer>
   );
@@ -92,17 +100,17 @@ export function SignupsBar({ data }: { data: { date: string; signups: number }[]
 // ── Listings bar chart ───────────────────────────────────────────────────────
 
 const listingsConfig: ChartConfig = {
-  listings: { label: "Listings" },
+  listings: { label: "Listings", color: "var(--primary)" },
 };
 
 export function ListingsBar({ data }: { data: { date: string; listings: number }[] }) {
   return (
     <ChartContainer config={listingsConfig} className="h-[220px] w-full">
       <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-        <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+        <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} />
+        <YAxis allowDecimals={false} tick={axisStyle} tickLine={false} axisLine={false} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar dataKey="listings" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="listings" fill="var(--primary)" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ChartContainer>
   );
