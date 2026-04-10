@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { getServerSession } from "@/lib/auth/get-session";
 import AppSidebar from "@/app/(routes)/(home)/components/app-sidebar";
 import ImpersonationBanner from "@/app/(routes)/(home)/components/impersonation-banner";
+import Breadcrumbs from "@/app/(routes)/(home)/components/breadcrumbs";
 
 export default async function HomeLayout({
   children,
@@ -40,6 +41,8 @@ export default async function HomeLayout({
         {isImpersonating && <ImpersonationBanner impersonatedName={user.name} />}
         <header className="flex h-12 items-center gap-2 border-b border-border px-4">
           <SidebarTrigger className="-ml-1" />
+          <div className="h-4 w-px bg-border" />
+          <Breadcrumbs />
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>
