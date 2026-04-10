@@ -92,9 +92,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     ]);
 
     const published = ownListings.filter((l) => l.status === "published").length;
-    const drafts = ownListings.filter((l) => l.status === "draft").length;
     const totalOffers = offerRows[0].value;
-    const totalClicks = viewRows[0].value;
     const totalReach = reachRows.length;
     const portfolioValue = ownListings.reduce((acc, l) => acc + l.askingPrice, 0);
 
