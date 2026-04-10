@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Copy, Check, ExternalLink } from "lucide-react";
+import { Trash2, Copy, ExternalLink, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Status = "draft" | "published";
 
@@ -30,19 +37,6 @@ function formatPrice(pesos: number) {
   return `₱${pesos.toLocaleString("en-PH")}`;
 }
 
-function CopyLinkButton({ id }: { id: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/listings/${id}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button onClick={copy} title="Copy listing link" className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">
-      {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
-    </button>
-  );
-}
 
 async function bulkListings(body: Record<string, unknown>) {
   return fetch("/api/admin/listings/bulk", {
@@ -117,20 +111,40 @@ function ListingRow({
           <option value="published">published</option>
         </select>
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1">
-          <CopyLinkButton id={listing.id} />
-          <Link href={`/listings/${listing.id}`} title="View listing" className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">
-            <ExternalLink size={13} />
-          </Link>
-          <button
-            onClick={() => onDelete(listing.id)}
-            title="Delete listing"
-            className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+      <td className="px-3 py-3 text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">
+              <MoreHorizontal size={15} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem asChild>
+              <Link href={`/listings/${listing.id}`} className="flex items-center gap-2">
+                <ExternalLink size={13} />
+                View listing
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/listings/${listing.id}`);
+                toast.success("Link copied");
+              }}
+              className="flex items-center gap-2"
+            >
+              <Copy size={13} />
+              Copy link
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(listing.id)}
+              className="flex items-center gap-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 size={13} />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </td>
     </tr>
   );
@@ -249,7 +263,7 @@ export default function ListingsTable({ listings }: { listings: Listing[] }) {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Seller</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Price</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>

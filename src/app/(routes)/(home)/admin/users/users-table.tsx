@@ -3,9 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Copy, Check, BadgeCheck, UserRoundCog } from "lucide-react";
+import { Trash2, Copy, BadgeCheck, UserRoundCog, MoreHorizontal, ExternalLink } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Role = "admin" | "seller" | "buyer";
 
@@ -47,20 +54,6 @@ async function bulkUsers(body: Record<string, unknown>) {
   });
 }
 
-function CopyLinkButton({ username }: { username: string | null }) {
-  const [copied, setCopied] = useState(false);
-  if (!username) return null;
-  const copy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/u/${username}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button onClick={copy} title="Copy profile link" className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">
-      {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
-    </button>
-  );
-}
 
 function UserRow({
   user,
@@ -168,31 +161,58 @@ function UserRow({
           </select>
         )}
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1">
-          <CopyLinkButton username={user.username} />
-          {!isSelf && (
-            <>
-              <button
-                onClick={handleImpersonate}
-                disabled={isPending}
-                title={`Impersonate ${user.name}`}
-                className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <UserRoundCog size={13} />
-              </button>
-              <button
-                onClick={() => onDelete(user.id)}
-                title="Delete user"
-                className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <Trash2 size={13} />
-              </button>
-            </>
-          )}
-        </div>
-      </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(user.createdAt)}</td>
+      <td className="px-3 py-3 text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded p-1 text-muted-foreground hover:text-foreground transition-colors">
+              <MoreHorizontal size={15} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            {user.username && (
+              <DropdownMenuItem asChild>
+                <Link href={`/u/${user.username}`} className="flex items-center gap-2">
+                  <ExternalLink size={13} />
+                  View profile
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {user.username && (
+              <DropdownMenuItem
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/u/${user.username}`);
+                  toast.success("Profile link copied");
+                }}
+                className="flex items-center gap-2"
+              >
+                <Copy size={13} />
+                Copy link
+              </DropdownMenuItem>
+            )}
+            {!isSelf && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleImpersonate}
+                  disabled={isPending}
+                  className="flex items-center gap-2"
+                >
+                  <UserRoundCog size={13} />
+                  Impersonate
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDelete(user.id)}
+                  className="flex items-center gap-2 text-destructive focus:text-destructive"
+                >
+                  <Trash2 size={13} />
+                  Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
     </tr>
   );
 }
@@ -315,8 +335,8 @@ export default function UsersTable({ users, currentUserId }: { users: User[]; cu
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Verified</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>
