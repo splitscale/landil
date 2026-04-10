@@ -19,6 +19,7 @@ export default async function AdminUsersPage() {
       email: user.email,
       role: user.role,
       verified: user.verified,
+      plan: user.plan,
       createdAt: user.createdAt,
     })
     .from(user)
@@ -28,13 +29,15 @@ export default async function AdminUsersPage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="mb-6 text-xl font-semibold tracking-tight">Users</h1>
 
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Verified</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
             </tr>
           </thead>
@@ -44,6 +47,10 @@ export default async function AdminUsersPage() {
             ))}
           </tbody>
         </table>
+
+        {users.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">No users yet.</p>
+        )}
       </div>
     </div>
   );
