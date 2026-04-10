@@ -36,7 +36,7 @@ export default async function HomeLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user} isImpersonating={isImpersonating} />
       <SidebarInset>
         {isImpersonating && <ImpersonationBanner impersonatedName={user.name} />}
         <header className="flex h-12 items-center gap-2 border-b border-border px-4">

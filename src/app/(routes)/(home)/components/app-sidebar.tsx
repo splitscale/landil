@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "@/lib/auth/client";
+import { signOut, authClient } from "@/lib/auth/client";
 import {
   IconCirclePlusFilled,
   IconDashboard,
@@ -13,6 +13,7 @@ import {
   IconSettings,
   IconBuildingStore,
   IconShieldHalf,
+  IconUserX,
 } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -121,13 +122,26 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
   );
 }
 
-export default function AppSidebar({ user }: { user: SidebarUser }) {
+export default function AppSidebar({ user, isImpersonating }: { user: SidebarUser; isImpersonating?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [stoppingImpersonation, setStoppingImpersonation] = useState(false);
+
+  const stopImpersonating = async () => {
+    setStoppingImpersonation(true);
+    try {
+      await authClient.admin.stopImpersonating();
+      router.push("/admin/users");
+      router.refresh();
+    } finally {
+      setStoppingImpersonation(false);
+    }
+  };
 
   return (
     <>
-      <Sidebar collapsible="offcanvas">
+      <Sidebar collapsible="icon">
         {/* Brand */}
         <SidebarHeader>
           <SidebarMenu>
@@ -203,6 +217,21 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
         </SidebarContent>
 
         <SidebarFooter>
+          {isImpersonating && (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={stopImpersonating}
+                  disabled={stoppingImpersonation}
+                  tooltip="Exit impersonation"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <IconUserX className="size-4 shrink-0" />
+                  <span>{stoppingImpersonation ? "Exiting…" : "Exit impersonation"}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
           <NavUser user={user} onSettingsOpen={() => setSettingsOpen(true)} />
         </SidebarFooter>
       </Sidebar>
