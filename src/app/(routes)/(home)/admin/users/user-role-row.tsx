@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BadgeCheck, UserRoundCog } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 
@@ -95,8 +96,14 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3">
-        <p className="font-medium">{user.name}</p>
-        {user.username && <p className="text-xs text-muted-foreground">@{user.username}</p>}
+        {user.username ? (
+          <Link href={`/u/${user.username}`} className="group">
+            <p className="font-medium group-hover:underline underline-offset-2">{user.name}</p>
+            <p className="text-xs text-muted-foreground">@{user.username}</p>
+          </Link>
+        ) : (
+          <p className="font-medium">{user.name}</p>
+        )}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
       <td className="px-4 py-3">
