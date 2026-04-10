@@ -1,12 +1,16 @@
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq, and, count } from "drizzle-orm";
+import { after } from "next/server";
 import Link from "next/link";
 import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
 import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
+import { trackListingView } from "@/lib/track-view";
+import AnalyticsChart from "./analytics-chart";
+import OffersChart from "./offers-chart";
 import { MapPin, FileText, MessageSquare, Sparkles, Pencil } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
@@ -25,11 +29,12 @@ export default async function ListingDetailPage({ params }: Props) {
   await requireRole("seller", "admin");
   const { id } = await params;
   const session = await getServerSession();
+  const u = session!.user as { id: string; plan?: string; role?: string };
 
   const [l] = await db
     .select()
     .from(listing)
-    .where(and(eq(listing.id, id), eq(listing.userId, session!.user.id)));
+    .where(and(eq(listing.id, id), eq(listing.userId, u.id)));
 
   if (!l) notFound();
 
@@ -38,8 +43,10 @@ export default async function ListingDetailPage({ params }: Props) {
     .from(offer)
     .where(eq(offer.listingId, id));
 
-  const u = session!.user as { plan?: string; role?: string };
   const isPro = u.plan === "pro" || u.role === "admin";
+
+  // Fire-and-forget after response is sent — no blocking
+  after(() => trackListingView(id, l.userId, u.id));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -68,6 +75,12 @@ export default async function ListingDetailPage({ params }: Props) {
         </div>
       </div>
 
+      {/* Metrics row */}
+      <div className={`grid gap-3 ${isPro ? "grid-cols-2" : "grid-cols-1"}`}>
+        <AnalyticsChart listingId={id} />
+        {isPro && <OffersChart listingId={id} />}
+      </div>
+
       {/* Key details */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
@@ -93,7 +106,6 @@ export default async function ListingDetailPage({ params }: Props) {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-        {/* Offers inbox */}
         {isPro ? (
           <Link
             href={`/listings/${id}/offers`}
@@ -125,6 +137,7 @@ export default async function ListingDetailPage({ params }: Props) {
           Documents
         </Link>
       </div>
+
     </div>
   );
 }
