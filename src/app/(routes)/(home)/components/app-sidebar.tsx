@@ -27,10 +27,12 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import SettingsDialog from "./settings-dialog";
@@ -140,9 +142,9 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
         </SidebarHeader>
 
         <SidebarContent>
+          {/* Main nav */}
           <SidebarGroup>
             <SidebarGroupContent className="flex flex-col gap-2">
-              {/* Primary CTA — sellers and admins only */}
               {(user.role === "seller" || user.role === "admin") && (
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -160,7 +162,6 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
                 </SidebarMenu>
               )}
 
-              {/* Nav items */}
               <SidebarMenu>
                 {NAV_MAIN.filter(({ roles }) => !roles || roles.includes(user.role ?? "")).map(({ title, href, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
@@ -173,24 +174,32 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
-
-              {/* Admin nav */}
-              {user.role === "admin" && (
-                <SidebarMenu>
-                  {NAV_ADMIN.map(({ title, href, icon: Icon }) => (
-                    <SidebarMenuItem key={href}>
-                      <SidebarMenuButton asChild tooltip={title} isActive={pathname.startsWith(href)}>
-                        <Link href={href}>
-                          <Icon />
-                          <span>{title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              )}
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* Admin nav */}
+          {user.role === "admin" && (
+            <>
+              <SidebarSeparator />
+              <SidebarGroup>
+                <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {NAV_ADMIN.map(({ title, href, icon: Icon }) => (
+                      <SidebarMenuItem key={href}>
+                        <SidebarMenuButton asChild tooltip={title} isActive={pathname.startsWith(href)}>
+                          <Link href={href}>
+                            <Icon />
+                            <span>{title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </>
+          )}
         </SidebarContent>
 
         <SidebarFooter>
