@@ -29,8 +29,7 @@ export default async function AdminListingsPage() {
     .orderBy(listing.createdAt);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="mb-6 text-xl font-semibold tracking-tight">Listings</h1>
+    <div>
 
       <div className="rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
