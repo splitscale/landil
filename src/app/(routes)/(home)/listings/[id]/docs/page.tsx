@@ -5,20 +5,14 @@ import { db } from "@/db";
 import { listing, listingDoc } from "@/db/schema/listings";
 import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
-import { FileText, Lock, Globe, Download, ArrowLeft } from "lucide-react";
+import { FileText, Lock, Globe, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import DocRow from "./doc-row";
 
 export const metadata: Metadata = { title: "Documents" };
 
 type Props = { params: Promise<{ id: string }> };
 
-function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default async function DocsPage({ params }: Props) {
   await requireRole("seller", "admin");
@@ -100,39 +94,3 @@ export default async function DocsPage({ params }: Props) {
   );
 }
 
-type DocRowProps = {
-  doc: { id: string; name: string; url: string; visibility: string; createdAt: Date };
-};
-
-function DocRow({ doc }: DocRowProps) {
-  const isPrivate = doc.visibility === "private";
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-      <FileText size={16} className="shrink-0 text-muted-foreground" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{doc.name}</p>
-        <p className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            isPrivate ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
-          }`}
-        >
-          {isPrivate ? <Lock size={8} /> : <Globe size={8} />}
-          {doc.visibility}
-        </span>
-        <a
-          href={doc.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          download={doc.name}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title="Download"
-        >
-          <Download size={14} />
-        </a>
-      </div>
-    </div>
-  );
-}
