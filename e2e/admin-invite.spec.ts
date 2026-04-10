@@ -20,10 +20,13 @@ test("generate invite then revoke removes it", async ({ page }) => {
   await page.getByRole("button", { name: /Generate/i }).click();
   await page.waitForTimeout(1500);
 
+  // Wait for the new invite row to appear before counting
   const revokeBtn = page.getByRole("dialog").locator('button[title="Revoke"]');
-  expect(await revokeBtn.count()).toBeGreaterThan(0);
+  await expect(revokeBtn.first()).toBeVisible({ timeout: 5000 });
 
   const countBefore = await revokeBtn.count();
+  expect(countBefore).toBeGreaterThan(0);
+
   await revokeBtn.first().click();
   await page.waitForTimeout(2000);
   const countAfter = await page
