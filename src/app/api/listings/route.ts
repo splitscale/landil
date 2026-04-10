@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { eq, count } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
 import { db } from "@/db";
 import { listing, listingPhoto, listingDoc } from "@/db/schema/listings";
+import { user } from "@/db/schema/auth/user";
 import { ListingSchema } from "@/app/(routes)/(home)/listings/new/validate";
+
+const FREE_LISTING_CAP = 3;
 
 const PhotoSchema = z.object({
   url: z.string().url(),
@@ -29,6 +33,21 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Enforce free tier cap
+  const [{ plan }] = await db.select({ plan: user.plan }).from(user).where(eq(user.id, session.user.id));
+  if (plan === "free") {
+    const [{ value: listingCount }] = await db
+      .select({ value: count() })
+      .from(listing)
+      .where(eq(listing.userId, session.user.id));
+    if (listingCount >= FREE_LISTING_CAP) {
+      return NextResponse.json(
+        { error: `Free plan is limited to ${FREE_LISTING_CAP} listings. Upgrade to Pro for unlimited listings.` },
+        { status: 403 },
+      );
+    }
   }
 
   const raw = await req.json();
