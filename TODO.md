@@ -10,8 +10,8 @@ The user provided inline text rather than a file path. I'll apply the compressio
 - [ ] Make offer flow
 
 ## Seller side
-- [ ] Listings dashboard (all listings, status)
-- [ ] Bids/offers inbox per listing (pro only)
+- [x] Listings dashboard (all listings, status)
+- [x] Bids/offers inbox per listing (pro only)
 - [ ] Valuation panel — zonal price + market trends (pro only)
 
 ## User profiles
@@ -22,24 +22,24 @@ The user provided inline text rather than a file path. I'll apply the compressio
 ## Freemium – Seller tiers
 
 ### DB / Auth
-- [ ] Add `plan` field to user (free | pro) with default "free"
-- [ ] Add listing count check (query-based, cap at 3 for free)
+- [x] Add `plan` field to user (free | pro) with default "free"
+- [x] Add listing count check (query-based, cap at 3 for free)
 
 ### Limits (free tier)
-- [ ] Block listing creation if over free cap
+- [x] Block listing creation if over free cap
 - [ ] Lock private doc visibility to pro sellers only
-- [ ] Gate offers/bids inbox behind upgrade prompt
+- [x] Gate offers/bids inbox behind upgrade prompt
 - [ ] Gate valuation tools behind upgrade prompt
 - [ ] Gate verified seller badge eligibility to pro
 
 ### Upgrade flow
-- [ ] Upgrade prompt UI (modal at gated features)
+- [x] Upgrade prompt UI (shown at gated features)
 - [ ] Payment integration (PayMongo for PH)
 - [ ] Webhook to flip user.plan to pro on payment success
 - [ ] Plan badge on seller profile
 
 ### Admin
-- [ ] Manual plan override (admin panel or direct DB for early deals)
+- [x] Manual plan override (admin panel)
 
 ## Shared
 - [ ] Listing search / browse page (public-facing)
