@@ -33,7 +33,8 @@ export default async function OffersPage({ params }: Props) {
   await requireRole("seller", "admin");
   const { id } = await params;
   const session = await getServerSession();
-  const isPro = (session!.user as { plan?: string }).plan === "pro";
+  const u = session!.user as { plan?: string; role?: string };
+  const isPro = u.plan === "pro" || u.role === "admin";
 
   // Verify listing belongs to seller
   const [l] = await db

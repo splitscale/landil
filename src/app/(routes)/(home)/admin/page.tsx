@@ -116,6 +116,7 @@ export default async function AdminPage() {
           <StatusDonut data={statusData} />
         </div>
       </div>
+
     </div>
   );
 }

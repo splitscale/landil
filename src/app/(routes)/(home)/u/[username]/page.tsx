@@ -6,7 +6,7 @@ import { user } from "@/db/schema/auth/user";
 import { listing } from "@/db/schema/listings";
 import { getServerSession } from "@/lib/auth/get-session";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BadgeCheck, MapPin, Mail, CalendarDays, LayoutList } from "lucide-react";
+import { BadgeCheck, ShieldCheck, MapPin, Mail, CalendarDays, LayoutList } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -66,10 +66,16 @@ export default async function ProfilePage({ params }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight">{profile.name}</h1>
-            {profile.verified && (
-              <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+            {profile.role === "admin" && (
+              <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                <ShieldCheck size={11} />
+                Admin
+              </span>
+            )}
+            {profile.verified && profile.role !== "admin" && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                 <BadgeCheck size={11} />
-                Verified seller
+                Verified
               </span>
             )}
           </div>

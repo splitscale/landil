@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 import { ShieldAlert } from "lucide-react";
 
@@ -21,17 +21,17 @@ export default function ImpersonationBanner({ impersonatedName }: { impersonated
   };
 
   return (
-    <div className="flex items-center justify-between bg-destructive/10 border-b border-destructive/20 px-4 py-2 text-sm">
-      <div className="flex items-center gap-2 text-destructive">
-        <ShieldAlert size={14} />
+    <div className="flex items-center justify-between bg-destructive/10 border-b border-destructive/20 px-4 py-1.5 text-xs text-destructive">
+      <div className="flex items-center gap-2">
+        <ShieldAlert size={12} />
         <span>Impersonating <strong>{impersonatedName}</strong></span>
       </div>
       <button
         onClick={stop}
         disabled={loading}
-        className="rounded-md border border-destructive/30 px-3 py-1 text-xs text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+        className="rounded border border-destructive/30 px-2 py-0.5 hover:bg-destructive/10 transition-colors disabled:opacity-50"
       >
-        {loading ? "Stopping…" : "Stop impersonating"}
+        {loading ? "Exiting…" : "Exit"}
       </button>
     </div>
   );
