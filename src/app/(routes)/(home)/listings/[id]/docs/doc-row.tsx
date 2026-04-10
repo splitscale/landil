@@ -1,13 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, Lock, Globe, Download, Eye } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { FileText, Lock, Globe, Download, X } from "lucide-react";
 
 type Doc = {
   id: string;
@@ -38,9 +32,28 @@ export default function DocRow({ doc }: { doc: Doc }) {
   const fileType = getFileType(doc.name, doc.url);
   const canPreview = fileType === "pdf" || fileType === "image";
 
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open]);
+
+  // Lock body scroll while open
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   return (
     <>
-      <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
+      <div
+        onClick={() => canPreview && setOpen(true)}
+        className={`flex items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors ${
+          canPreview ? "cursor-pointer hover:bg-muted/50" : ""
+        }`}
+      >
         <FileText size={16} className="shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{doc.name}</p>
@@ -55,20 +68,12 @@ export default function DocRow({ doc }: { doc: Doc }) {
             {isPrivate ? <Lock size={8} /> : <Globe size={8} />}
             {doc.visibility}
           </span>
-          {canPreview && (
-            <button
-              onClick={() => setOpen(true)}
-              title="Preview"
-              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <Eye size={14} />
-            </button>
-          )}
           <a
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
             download={doc.name}
+            onClick={(e) => e.stopPropagation()}
             className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="Download"
           >
@@ -77,12 +82,33 @@ export default function DocRow({ doc }: { doc: Doc }) {
         </div>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-5 py-4 border-b border-border shrink-0">
-            <DialogTitle className="truncate text-sm font-medium">{doc.name}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 bg-muted/30">
+      {open && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          {/* Top bar */}
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+            <p className="truncate text-sm font-medium">{doc.name}</p>
+            <div className="flex items-center gap-2">
+              <a
+                href={doc.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={doc.name}
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Download size={12} />
+                Download
+              </a>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Viewer */}
+          <div className="flex-1 min-h-0">
             {fileType === "pdf" && (
               <iframe
                 src={doc.url}
@@ -91,18 +117,18 @@ export default function DocRow({ doc }: { doc: Doc }) {
               />
             )}
             {fileType === "image" && (
-              <div className="flex h-full items-center justify-center p-4">
+              <div className="flex h-full items-center justify-center bg-muted/20 p-6">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={doc.url}
                   alt={doc.name}
-                  className="max-h-full max-w-full object-contain rounded-lg"
+                  className="max-h-full max-w-full object-contain"
                 />
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   );
 }
