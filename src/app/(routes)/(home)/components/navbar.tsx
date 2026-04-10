@@ -61,19 +61,17 @@ export default function Navbar({ user }: { user: NavUser }) {
           {/* Right side */}
           {user ? (
             <div className="flex items-center gap-2">
-              {(user.role === "seller" || user.role === "admin") && (
-                <Link
-                  href="/listings/new"
-                  className={cn(
-                    buttonVariants({ variant: "default", size: "sm" }),
-                    "gap-1.5",
-                    pathname === "/listings/new" && "opacity-60 pointer-events-none",
-                  )}
-                >
-                  <LayoutList size={13} />
-                  New listing
-                </Link>
-              )}
+              <Link
+                href="/listings/new"
+                className={cn(
+                  buttonVariants({ variant: "default", size: "sm" }),
+                  "gap-1.5",
+                  pathname === "/listings/new" && "opacity-60 pointer-events-none",
+                )}
+              >
+                <LayoutList size={13} />
+                New listing
+              </Link>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
