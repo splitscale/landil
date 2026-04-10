@@ -38,7 +38,8 @@ export default async function ListingDetailPage({ params }: Props) {
     .from(offer)
     .where(eq(offer.listingId, id));
 
-  const isPro = (session!.user as { plan?: string }).plan === "pro";
+  const u = session!.user as { plan?: string; role?: string };
+  const isPro = u.plan === "pro" || u.role === "admin";
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">

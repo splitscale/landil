@@ -133,15 +133,19 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
         </button>
       </td>
       <td className="px-4 py-3">
-        <select
-          value={plan}
-          disabled={loading}
-          onChange={(e) => handlePlanChange(e.target.value as "free" | "pro")}
-          className="rounded-md border border-border bg-background px-2 py-1 text-xs capitalize disabled:opacity-50 cursor-pointer"
-        >
-          <option value="free">free</option>
-          <option value="pro">pro</option>
-        </select>
+        {role === "admin" ? (
+          <span className="text-xs text-muted-foreground italic">unrestricted</span>
+        ) : (
+          <select
+            value={plan}
+            disabled={loading}
+            onChange={(e) => handlePlanChange(e.target.value as "free" | "pro")}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs capitalize disabled:opacity-50 cursor-pointer"
+          >
+            <option value="free">free</option>
+            <option value="pro">pro</option>
+          </select>
+        )}
       </td>
       <td className="px-4 py-3">
         {!isSelf && (

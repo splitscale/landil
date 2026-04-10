@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   description: "Sign in to your Landil account to access land listings, due diligence tools, and market data.",
 };
 
-export default function SignInPage() {
+type Props = { searchParams: Promise<{ callbackUrl?: string }> };
+
+export default async function SignInPage({ searchParams }: Props) {
+  const { callbackUrl } = await searchParams;
+
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center">
       <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
@@ -21,7 +25,7 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <SignInForm />
+        <SignInForm callbackUrl={callbackUrl} />
 
         <div className="flex items-center justify-center gap-2">
           <small>Don&apos;t have an account?</small>

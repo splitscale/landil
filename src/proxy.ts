@@ -15,6 +15,7 @@ export async function proxy(request: NextRequest) {
   const isApiUploadThing = request.nextUrl.pathname.startsWith("/api/uploadthing");
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isPublicProfile = request.nextUrl.pathname.startsWith("/u/");
+  const isInvitePage = request.nextUrl.pathname.startsWith("/invite/");
 
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
 
@@ -23,7 +24,7 @@ export async function proxy(request: NextRequest) {
   };
 
   // API routes handle their own auth — never redirect them to signin
-  if (isApiAuth || isApiUploadThing || isApiRoute || isPublicProfile) {
+  if (isApiAuth || isApiUploadThing || isApiRoute || isPublicProfile || isInvitePage) {
     return NextResponse.next();
   }
 

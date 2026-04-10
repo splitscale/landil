@@ -21,7 +21,7 @@ import InputPasswordContainer from "../components/input-password";
 import { cn } from "@/lib/utils";
 import { AtSign } from "lucide-react";
 
-export default function SignInForm() {
+export default function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -41,7 +41,7 @@ export default function SignInForm() {
         console.log("SIGN_IN:", response.error.message);
         toast.error(response.error.message);
       } else {
-        router.push("/");
+        router.push(callbackUrl ?? "/");
       }
     });
   }
