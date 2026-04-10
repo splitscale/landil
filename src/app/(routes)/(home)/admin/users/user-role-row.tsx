@@ -39,6 +39,7 @@ async function patchUser(id: string, body: Record<string, unknown>) {
 export default function UserRoleRow({ user, currentUserId }: { user: User; currentUserId: string }) {
   const [role, setRole] = useState<Role>(user.role as Role);
   const [verified, setVerified] = useState(user.verified);
+  const [plan, setPlan] = useState<"free" | "pro">(user.plan as "free" | "pro");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const isSelf = user.id === currentUserId;
@@ -61,6 +62,18 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
     try {
       await patchUser(user.id, { verified: !verified });
       setVerified((v) => !v);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePlanChange = async (next: "free" | "pro") => {
+    if (next === plan || loading) return;
+    setLoading(true);
+    try {
+      await patchUser(user.id, { plan: next });
+      setPlan(next);
       router.refresh();
     } finally {
       setLoading(false);
@@ -108,11 +121,15 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
         </button>
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-          user.plan === "pro" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-        }`}>
-          {user.plan}
-        </span>
+        <select
+          value={plan}
+          disabled={loading}
+          onChange={(e) => handlePlanChange(e.target.value as "free" | "pro")}
+          className="rounded-md border border-border bg-background px-2 py-1 text-xs capitalize disabled:opacity-50 cursor-pointer"
+        >
+          <option value="free">free</option>
+          <option value="pro">pro</option>
+        </select>
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(user.createdAt)}</td>
     </tr>
