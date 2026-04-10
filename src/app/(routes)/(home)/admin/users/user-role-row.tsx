@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, UserRoundCog } from "lucide-react";
+import { authClient } from "@/lib/auth/client";
 
 type Role = "admin" | "seller" | "buyer";
 
@@ -80,6 +81,17 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
     }
   };
 
+  const handleImpersonate = async () => {
+    setLoading(true);
+    try {
+      await authClient.admin.impersonateUser({ userId: user.id });
+      router.push("/");
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3">
@@ -130,6 +142,19 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
           <option value="free">free</option>
           <option value="pro">pro</option>
         </select>
+      </td>
+      <td className="px-4 py-3">
+        {!isSelf && (
+          <button
+            onClick={handleImpersonate}
+            disabled={loading}
+            title={`Impersonate ${user.name}`}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            <UserRoundCog size={11} />
+            Impersonate
+          </button>
+        )}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(user.createdAt)}</td>
     </tr>
