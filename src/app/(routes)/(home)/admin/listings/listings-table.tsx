@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Copy, ExternalLink, MoreHorizontal } from "lucide-react";
+import { Trash2, Copy, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -119,12 +119,6 @@ function ListingRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem asChild>
-              <Link href={`/listings/${listing.id}`} className="flex items-center gap-2">
-                <ExternalLink size={13} />
-                View listing
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/listings/${listing.id}`);

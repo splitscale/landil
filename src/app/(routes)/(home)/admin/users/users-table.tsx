@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Copy, BadgeCheck, UserRoundCog, MoreHorizontal, ExternalLink } from "lucide-react";
+import { Trash2, Copy, BadgeCheck, UserRoundCog, MoreHorizontal } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { toast } from "sonner";
 import {
@@ -170,14 +170,6 @@ function UserRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            {user.username && (
-              <DropdownMenuItem asChild>
-                <Link href={`/u/${user.username}`} className="flex items-center gap-2">
-                  <ExternalLink size={13} />
-                  View profile
-                </Link>
-              </DropdownMenuItem>
-            )}
             {user.username && (
               <DropdownMenuItem
                 onClick={() => {
