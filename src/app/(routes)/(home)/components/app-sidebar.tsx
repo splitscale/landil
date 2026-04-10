@@ -141,7 +141,7 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
           </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent className="overflow-x-hidden">
           {/* Main nav */}
           <SidebarGroup>
             <SidebarGroupContent className="flex flex-col gap-2">
@@ -202,7 +202,7 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
           )}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="overflow-x-hidden">
           <NavUser user={user} onSettingsOpen={() => setSettingsOpen(true)} />
         </SidebarFooter>
       </Sidebar>
