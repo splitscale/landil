@@ -5,28 +5,28 @@ export const VALID_WINDOWS: Window[] = ["1h", "1d", "7d", "30d"];
 
 export function bucketConfig(w: Window): {
   truncExpr: ReturnType<typeof sql>;
-  since: Date;
+  since: string;
 } {
-  const now = new Date();
+  const now = Date.now();
   switch (w) {
     case "1h":
       return {
-        since: new Date(now.getTime() - 60 * 60 * 1000),
+        since: new Date(now - 60 * 60 * 1000).toISOString(),
         truncExpr: sql`date_trunc('hour', created_at) + interval '5 minutes' * (extract(minute from created_at)::integer / 5)`,
       };
     case "1d":
       return {
-        since: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+        since: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
         truncExpr: sql`date_trunc('hour', created_at)`,
       };
     case "7d":
       return {
-        since: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+        since: new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(),
         truncExpr: sql`date_trunc('day', created_at)`,
       };
     case "30d":
       return {
-        since: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+        since: new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
         truncExpr: sql`date_trunc('day', created_at)`,
       };
   }
