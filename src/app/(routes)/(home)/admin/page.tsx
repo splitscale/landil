@@ -1,12 +1,10 @@
 import { type Metadata } from "next";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
-import { adminInvite } from "@/db/schema/auth";
 import { listing } from "@/db/schema/listings";
 import { requireRole } from "@/lib/auth/roles";
 import { Users, LayoutList, ShieldCheck, TrendingUp } from "lucide-react";
 import { RoleDonut, StatusDonut, SignupsBar, ListingsBar } from "./charts";
-import InvitePanel from "./invite-panel";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -38,10 +36,9 @@ function buildDailyBuckets(dates: (Date | string | null)[], days = 30) {
 export default async function AdminPage() {
   await requireRole("admin");
 
-  const [users, listings, invites] = await Promise.all([
+  const [users, listings] = await Promise.all([
     db.select({ id: user.id, role: user.role, plan: user.plan, createdAt: user.createdAt }).from(user),
     db.select({ id: listing.id, status: listing.status, createdAt: listing.createdAt }).from(listing),
-    db.select().from(adminInvite).orderBy(adminInvite.createdAt),
   ]);
 
   // Counts
@@ -120,8 +117,6 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {/* Admin invites */}
-      <InvitePanel initial={invites} />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { type Metadata } from "next";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
+import { adminInvite } from "@/db/schema/auth";
 import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
 import UserRoleRow from "./user-role-row";
+import InvitePanel from "../invite-panel";
 
 export const metadata: Metadata = { title: "Users · Admin" };
 
@@ -11,19 +13,22 @@ export default async function AdminUsersPage() {
   await requireRole("admin");
   const session = await getServerSession();
 
-  const users = await db
-    .select({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      verified: user.verified,
-      plan: user.plan,
-      createdAt: user.createdAt,
-    })
-    .from(user)
-    .orderBy(user.createdAt);
+  const [users, invites] = await Promise.all([
+    db
+      .select({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        verified: user.verified,
+        plan: user.plan,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .orderBy(user.createdAt),
+    db.select().from(adminInvite).orderBy(adminInvite.createdAt),
+  ]);
 
   return (
     <div>
@@ -52,6 +57,8 @@ export default async function AdminUsersPage() {
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">No users yet.</p>
         )}
       </div>
+
+      <InvitePanel initial={invites} />
     </div>
   );
 }
