@@ -5,6 +5,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { LayoutList } from "lucide-react";
+import { eq, count } from "drizzle-orm";
+import { db } from "@/db";
+import { user } from "@/db/schema/auth/user";
+import SetupAdminDialog from "./components/setup-admin-dialog";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -15,8 +19,15 @@ export default async function Home() {
   const me = await getServerSession();
   if (!me) redirect("/signin");
 
+  const [{ value: adminCount }] = await db
+    .select({ value: count() })
+    .from(user)
+    .where(eq(user.role, "admin"));
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-10">
+      {adminCount === 0 && <SetupAdminDialog />}
+
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           Welcome back, {me.user.name}
