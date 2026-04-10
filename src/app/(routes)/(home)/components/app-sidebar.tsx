@@ -12,6 +12,7 @@ import {
   IconLogout,
   IconSettings,
   IconBuildingStore,
+  IconShieldHalf,
 } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -49,8 +50,12 @@ function initials(name: string) {
 
 const NAV_MAIN = [
   { title: "Dashboard", href: "/", icon: IconDashboard },
-  { title: "My listings", href: "/listings", icon: IconListDetails },
+  { title: "My listings", href: "/listings", icon: IconListDetails, roles: ["seller", "admin"] },
   { title: "Browse", href: "/browse", icon: IconBuildingStore },
+];
+
+const NAV_ADMIN = [
+  { title: "Admin", href: "/admin", icon: IconShieldHalf },
 ];
 
 const NAV_SECONDARY = [
@@ -137,25 +142,27 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent className="flex flex-col gap-2">
-              {/* Primary CTA */}
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip="New listing"
-                    className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-                  >
-                    <Link href="/listings/new">
-                      <IconCirclePlusFilled />
-                      <span>New listing</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+              {/* Primary CTA — sellers and admins only */}
+              {(user.role === "seller" || user.role === "admin") && (
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip="New listing"
+                      className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                    >
+                      <Link href="/listings/new">
+                        <IconCirclePlusFilled />
+                        <span>New listing</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              )}
 
               {/* Nav items */}
               <SidebarMenu>
-                {NAV_MAIN.map(({ title, href, icon: Icon }) => (
+                {NAV_MAIN.filter(({ roles }) => !roles || roles.includes(user.role ?? "")).map(({ title, href, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
                     <SidebarMenuButton asChild tooltip={title} isActive={pathname === href}>
                       <Link href={href}>
@@ -166,6 +173,22 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
+
+              {/* Admin nav */}
+              {user.role === "admin" && (
+                <SidebarMenu>
+                  {NAV_ADMIN.map(({ title, href, icon: Icon }) => (
+                    <SidebarMenuItem key={href}>
+                      <SidebarMenuButton asChild tooltip={title} isActive={pathname.startsWith(href)}>
+                        <Link href={href}>
+                          <Icon />
+                          <span>{title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
