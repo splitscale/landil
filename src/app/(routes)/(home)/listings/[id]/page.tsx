@@ -7,7 +7,7 @@ import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
 import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
-import { MapPin, FileText, MessageSquare, Sparkles } from "lucide-react";
+import { MapPin, FileText, MessageSquare, Sparkles, Pencil } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -52,11 +52,20 @@ export default async function ListingDetailPage({ params }: Props) {
             {l.city}, {l.province}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-          l.status === "published" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-        }`}>
-          {l.status}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+            l.status === "published" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+          }`}>
+            {l.status}
+          </span>
+          <Link
+            href={`/listings/${id}/edit`}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors"
+          >
+            <Pencil size={12} />
+            Edit
+          </Link>
+        </div>
       </div>
 
       {/* Key details */}

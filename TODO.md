@@ -12,7 +12,7 @@
 - [x] Listing detail page (key details, status badge, actions)
 - [x] Bids/offers inbox per listing (pro + admin only, upgrade prompt for free)
 - [x] Document viewer per listing (public/private sections, download links)
-- [ ] Listing edit page
+- [x] Listing edit page (4-step wizard, pre-populated, PATCH API, photo/doc diffing)
 - [ ] Valuation panel — zonal price + market trends (pro only)
 
 ## User profiles
