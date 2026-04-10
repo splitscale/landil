@@ -1,6 +1,5 @@
 import { type Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getServerSession } from "@/lib/auth/get-session";
+import { requireRole } from "@/lib/auth/roles";
 import NewListingForm from "@/app/(routes)/(home)/listings/new/form";
 
 export const metadata: Metadata = {
@@ -9,8 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NewListingPage() {
-  const session = await getServerSession();
-  if (!session) redirect("/signin");
+  await requireRole("seller", "admin");
 
   return (
     <div className="min-h-screen bg-background">

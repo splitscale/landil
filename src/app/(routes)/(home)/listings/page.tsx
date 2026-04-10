@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
+import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
 import { MapPin } from "lucide-react";
 
@@ -13,6 +14,7 @@ function formatPrice(pesos: number) {
 }
 
 export default async function MyListingsPage() {
+  await requireRole("seller", "admin");
   const session = await getServerSession();
   const userId = session!.user.id;
 
