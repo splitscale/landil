@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Link2, Trash2, Copy, Check, ShieldPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type Invite = {
   token: string;
@@ -72,73 +80,78 @@ export default function InvitePanel({ initial }: { initial: Invite[] }) {
   const used   = invites.filter((i) => i.usedAt);
 
   return (
-    <div className="rounded-xl border border-border p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium">Admin invites</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Share a link to grant someone admin access. Each link expires in 7 days and is single-use.
-          </p>
-        </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
-        >
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5">
           <ShieldPlus size={13} />
-          {loading ? "Generating…" : "Generate link"}
-        </button>
-      </div>
+          Invite admin
+        </Button>
+      </DialogTrigger>
 
-      {active.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Active</p>
-          {active.map((inv) => (
-            <div key={inv.token} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
-              <Link2 size={13} className="shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs text-foreground">
-                  /invite/{inv.token.slice(0, 8)}…
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Expires {formatDate(inv.expiresAt)}
-                </p>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Admin invites</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-xs text-muted-foreground -mt-1">
+          Share a link to grant someone admin access. Each link expires in 7 days and is single-use.
+        </p>
+
+        <Button onClick={generate} disabled={loading} size="sm" className="w-full gap-1.5">
+          <ShieldPlus size={13} />
+          {loading ? "Generating…" : "Generate invite link"}
+        </Button>
+
+        {active.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Active</p>
+            {active.map((inv) => (
+              <div key={inv.token} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5">
+                <Link2 size={13} className="shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-xs text-foreground">
+                    /invite/{inv.token.slice(0, 8)}…
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Expires {formatDate(inv.expiresAt)}
+                  </p>
+                </div>
+                <CopyButton token={inv.token} />
+                <button
+                  onClick={() => revoke(inv.token)}
+                  title="Revoke"
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-              <CopyButton token={inv.token} />
-              <button
-                onClick={() => revoke(inv.token)}
-                title="Revoke"
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {used.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Used</p>
-          {used.map((inv) => (
-            <div key={inv.token} className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2.5 opacity-60">
-              <Link2 size={13} className="shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs text-muted-foreground">
-                  /invite/{inv.token.slice(0, 8)}…
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Used {formatDate(inv.usedAt!)}
-                </p>
+        {used.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Used</p>
+            {used.map((inv) => (
+              <div key={inv.token} className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2.5 opacity-60">
+                <Link2 size={13} className="shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-xs text-muted-foreground">
+                    /invite/{inv.token.slice(0, 8)}…
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Used {formatDate(inv.usedAt!)}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {active.length === 0 && used.length === 0 && (
-        <p className="text-xs text-muted-foreground">No invites yet. Generate one above.</p>
-      )}
-    </div>
+        {active.length === 0 && used.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-2">No invites yet.</p>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

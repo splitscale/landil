@@ -31,7 +31,12 @@ export default async function AdminUsersPage() {
   ]);
 
   return (
-    <div>
+    <div className="space-y-4">
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-muted-foreground">{users.length} user{users.length !== 1 ? "s" : ""}</p>
+        <InvitePanel initial={invites} />
+      </div>
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full text-sm">
@@ -57,8 +62,6 @@ export default async function AdminUsersPage() {
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">No users yet.</p>
         )}
       </div>
-
-      <InvitePanel initial={invites} />
     </div>
   );
 }
