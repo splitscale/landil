@@ -1,5 +1,4 @@
 import { type Metadata } from "next";
-import Link from "next/link";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { listing } from "@/db/schema/listings";
@@ -72,27 +71,25 @@ export default async function AdminPage() {
   ];
 
   const stats = [
-    { label: "Total users", value: users.length, sub: `${byRole.seller} sellers · ${byRole.buyer} buyers`, href: "/admin/users", icon: Users },
-    { label: "Total listings", value: listings.length, sub: `${byStatus.published} published · ${byStatus.draft} drafts`, href: "/admin/listings", icon: LayoutList },
-    { label: "Pro users", value: proUsers, sub: `${users.length - proUsers} on free`, href: "/admin/users", icon: TrendingUp },
-    { label: "Admins", value: byRole.admin, sub: "Platform administrators", href: "/admin/users", icon: ShieldCheck },
+    { label: "Total users", value: users.length, sub: `${byRole.seller} sellers · ${byRole.buyer} buyers`, icon: Users },
+    { label: "Total listings", value: listings.length, sub: `${byStatus.published} published · ${byStatus.draft} drafts`, icon: LayoutList },
+    { label: "Pro users", value: proUsers, sub: `${users.length - proUsers} on free`, icon: TrendingUp },
+    { label: "Admins", value: byRole.admin, sub: "Platform administrators", icon: ShieldCheck },
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-      <h1 className="text-xl font-semibold tracking-tight">Overview</h1>
-
+    <div className="space-y-8">
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map(({ label, value, sub, href, icon: Icon }) => (
-          <Link key={label} href={href} className="rounded-xl border border-border p-4 transition-colors hover:bg-muted/50">
+        {stats.map(({ label, value, sub, icon: Icon }) => (
+          <div key={label} className="rounded-xl border border-border p-4">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Icon size={12} />
               {label}
             </div>
             <p className="mt-2 text-3xl font-semibold">{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-          </Link>
+          </div>
         ))}
       </div>
 
@@ -122,3 +119,4 @@ export default async function AdminPage() {
     </div>
   );
 }
+

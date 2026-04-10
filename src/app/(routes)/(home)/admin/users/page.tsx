@@ -26,8 +26,7 @@ export default async function AdminUsersPage() {
     .orderBy(user.createdAt);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="mb-6 text-xl font-semibold tracking-tight">Users</h1>
+    <div>
 
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full text-sm">
