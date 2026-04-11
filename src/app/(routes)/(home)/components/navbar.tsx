@@ -74,7 +74,7 @@ export default function Navbar({
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    await signOut({ fetchOptions: { onSuccess: () => router.push("/signin") } });
+    await signOut({ fetchOptions: { onSuccess: () => router.push("/") } });
   };
 
   const hasActiveOffers = recentOffers.some(

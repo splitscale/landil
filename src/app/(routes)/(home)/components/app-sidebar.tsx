@@ -80,7 +80,7 @@ function NavUser({
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    await signOut({ fetchOptions: { onSuccess: () => router.push("/signin") } });
+    await signOut({ fetchOptions: { onSuccess: () => router.push("/") } });
   };
 
   return (
