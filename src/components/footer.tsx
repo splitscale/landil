@@ -1,54 +1,50 @@
 import Link from "next/link";
 
-const NAV_LINKS = [
-  { label: "Browse", href: "/" },
-  { label: "About", href: "/about" },
-  { label: "Sign in", href: "/signin" },
-  { label: "Sign up", href: "/signup" },
+const navLinks = [
+	{ href: "/about", label: "About" },
 ];
 
-export default function Footer() {
-  return (
-    <footer className="border-t border-border py-6">
-      <div className="mx-auto max-w-6xl px-4 space-y-4">
+export function Footer() {
+	return (
+		<footer className="mx-auto max-w-6xl *:px-4 *:md:px-6">
+			<div className="flex flex-col gap-6 py-6">
+				<div className="flex items-center justify-between">
+					<Link href="/" className="text-sm font-semibold tracking-tight">
+						Landil
+					</Link>
+				</div>
 
-        {/* Top row: brand + nav */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
-            Landil
-          </Link>
-          <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            {NAV_LINKS.map(({ label, href }) => (
-              <Link
-                key={href}
-                href={href}
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+				<nav>
+					<ul className="flex flex-wrap gap-4 font-medium text-muted-foreground text-sm md:gap-6">
+						{navLinks.map((link) => (
+							<li key={link.label}>
+								<Link className="hover:text-foreground transition-colors" href={link.href}>
+									{link.label}
+								</Link>
+							</li>
+						))}
+					</ul>
+				</nav>
+			</div>
 
-        {/* Bottom row: copyright + builder */}
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Landil. All rights reserved.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Built by{" "}
-            <a
-              href="https://splitscale.ph"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-foreground underline-offset-4 hover:underline transition-colors"
-            >
-              Splitscale
-            </a>
-          </p>
-        </div>
+			<div className="flex items-center justify-between gap-4 border-t py-4 text-muted-foreground text-sm">
+				<p>&copy; {new Date().getFullYear()} Landil</p>
 
-      </div>
-    </footer>
-  );
+				<p className="inline-flex items-center gap-1">
+					<span>Built by</span>
+					<a
+						aria-label="Splitscale"
+						className="font-medium text-foreground/80 hover:text-foreground hover:underline underline-offset-4 transition-colors"
+						href="https://splitscale.ph"
+						rel="noreferrer"
+						target="_blank"
+					>
+						Splitscale
+					</a>
+				</p>
+			</div>
+		</footer>
+	);
 }
+
+export default Footer;
