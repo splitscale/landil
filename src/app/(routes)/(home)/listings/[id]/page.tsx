@@ -27,10 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ListingDetailPage({ params }: Props) {
   const { id } = await params;
   const session = await getServerSession();
-  if (!session) notFound();
 
-  const u = session.user as { id: string; plan?: string; role?: string };
-  const isAdmin = u.role === "admin";
+  const u = session?.user as { id: string; plan?: string; role?: string } | undefined;
+  const isAdmin = u?.role === "admin";
 
   // Fetch listing — published visible to all, draft only to owner/admin
   const [l] = await db
@@ -40,13 +39,13 @@ export default async function ListingDetailPage({ params }: Props) {
 
   if (!l) notFound();
 
-  const isOwner = l.userId === u.id;
+  const isOwner = u ? l.userId === u.id : false;
   const canManage = isOwner || isAdmin;
 
   // Draft listings only visible to owner/admin
   if (l.status === "draft" && !canManage) notFound();
 
-  const isPro = u.plan === "pro" || isAdmin;
+  const isPro = u?.plan === "pro" || isAdmin;
 
   const [photos, docs, sellerInfo] = await Promise.all([
     db.select().from(listingPhoto).where(eq(listingPhoto.listingId, id)).orderBy(listingPhoto.cover),
@@ -61,7 +60,7 @@ export default async function ListingDetailPage({ params }: Props) {
   if (canManage) {
     const [{ value }] = await db.select({ value: count() }).from(offer).where(eq(offer.listingId, id));
     offerCount = value;
-  } else {
+  } else if (u) {
     const [existing] = await db
       .select({ id: offer.id, amount: offer.amount, status: offer.status })
       .from(offer)
@@ -105,7 +104,7 @@ export default async function ListingDetailPage({ params }: Props) {
     };
   }
 
-  after(() => trackListingView(id, l.userId, u.id));
+  after(() => trackListingView(id, l.userId, u?.id ?? null));
 
   // ── Seller / Admin view ──────────────────────────────────────────────────
   if (canManage) {
@@ -372,7 +371,7 @@ export default async function ListingDetailPage({ params }: Props) {
             </Link>
           </div>
         ) : (
-          <MakeOfferDialog listingId={id} askingPrice={l.askingPrice} lotArea={l.lotArea} />
+          <MakeOfferDialog listingId={id} askingPrice={l.askingPrice} lotArea={l.lotArea} isGuest={!session} />
         )}
       </div>
 

@@ -1,6 +1,5 @@
 import { type Metadata } from "next";
 import { getServerSession } from "@/lib/auth/get-session";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { and, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 import { db } from "@/db";
@@ -33,10 +32,9 @@ type HomePageProps = {
 
 export default async function Home({ searchParams }: HomePageProps) {
   const me = await getServerSession();
-  if (!me) redirect("/signin");
-
-  const u = me.user as { id: string; name: string; role?: string | null; username?: string | null; email: string; image?: string | null };
-  const role = u.role ?? "buyer";
+  // Guests go straight to browse — no redirect
+  const u = me?.user as { id: string; name: string; role?: string | null; username?: string | null; email: string; image?: string | null } | null;
+  const role = u?.role ?? "guest";
   const isAdmin = role === "admin";
   const isSeller = role === "seller";
 
@@ -50,7 +48,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     const ownListings = await db
       .select({ id: listing.id, status: listing.status, askingPrice: listing.askingPrice })
       .from(listing)
-      .where(isAdmin ? undefined : eq(listing.userId, u.id));
+      .where(isAdmin ? undefined : eq(listing.userId, u!.id));
 
     const listingIds = ownListings.map((l) => l.id);
 
@@ -77,7 +75,7 @@ export default async function Home({ searchParams }: HomePageProps) {
 
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
-            Welcome back, {u.name}
+            Welcome back, {u!.name}
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {isAdmin ? "Platform overview" : "Your seller dashboard"}

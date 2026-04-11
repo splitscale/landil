@@ -3,18 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import SignInModal from "@/components/ui/sign-in-modal";
 
 export default function MakeOfferDialog({
   listingId,
   askingPrice,
   lotArea,
+  isGuest,
 }: {
   listingId: string;
   askingPrice: number;
   lotArea: string;
+  isGuest?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
   const [amount, setAmount] = useState(askingPrice.toLocaleString("en-PH"));
   const [note, setNote] = useState("");
   const [sqm, setSqm] = useState("");
@@ -56,12 +60,20 @@ export default function MakeOfferDialog({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        Make an offer
-      </button>
+      <>
+        <button
+          onClick={() => isGuest ? setSignInOpen(true) : setOpen(true)}
+          className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Make an offer
+        </button>
+        {isGuest && (
+          <SignInModal
+            open={signInOpen}
+            onOpenChange={setSignInOpen}
+          />
+        )}
+      </>
     );
   }
 
