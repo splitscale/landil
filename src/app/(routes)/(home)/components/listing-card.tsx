@@ -14,6 +14,7 @@ export type ListingCardData = {
   coverUrl?: string | null;
   sellerName?: string | null;
   sellerUsername?: string | null;
+  status?: string | null;
 };
 
 export default function ListingCard({ item }: { item: ListingCardData }) {
@@ -52,6 +53,15 @@ export default function ListingCard({ item }: { item: ListingCardData }) {
 
         <p className="mt-3 text-sm font-semibold">{formatPrice(item.askingPrice)}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">{item.lotArea} sqm</p>
+        {item.status && (
+          <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+            item.status === "published" ? "bg-primary/10 text-primary" :
+            item.status === "sold" ? "bg-green-500/10 text-green-600 dark:text-green-400" :
+            "bg-muted text-muted-foreground"
+          }`}>
+            {item.status}
+          </span>
+        )}
       </Link>
 
       {item.sellerUsername && (
