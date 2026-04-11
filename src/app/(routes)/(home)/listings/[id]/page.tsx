@@ -14,6 +14,7 @@ import AnalyticsChart from "./analytics-chart";
 import OffersChart from "./offers-chart";
 import MakeOfferDialog from "./make-offer-dialog";
 import ListingCard from "@/app/(routes)/(home)/components/listing-card";
+import Image from "next/image";
 import { MapPin, FileText, MessageSquare, Sparkles, Pencil, Globe, Lock, TrendingUp } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
@@ -263,19 +264,29 @@ export default async function ListingDetailPage({ params }: Props) {
       {photos.length > 0 && (
         <div className="space-y-2">
           {coverPhoto && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={coverPhoto.url}
               alt={l.title}
+              width={900}
+              height={400}
+              priority
               className="w-full rounded-xl object-cover"
               style={{ maxHeight: 400 }}
+              sizes="(max-width: 768px) 100vw, 768px"
             />
           )}
           {otherPhotos.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {otherPhotos.slice(0, 4).map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.id} src={p.url} alt={l.title} className="h-24 w-full rounded-lg object-cover" />
+                <Image
+                  key={p.id}
+                  src={p.url}
+                  alt={l.title}
+                  width={200}
+                  height={96}
+                  className="h-24 w-full rounded-lg object-cover"
+                  sizes="(max-width: 768px) 25vw, 192px"
+                />
               ))}
             </div>
           )}

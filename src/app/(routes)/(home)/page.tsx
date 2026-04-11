@@ -38,17 +38,15 @@ export default async function Home({ searchParams }: HomePageProps) {
   const isAdmin = role === "admin";
   const isSeller = role === "seller";
 
-  const [{ value: adminCount }] = await db
-    .select({ value: count() })
-    .from(user)
-    .where(eq(user.role, "admin"));
-
   // ── Seller / Admin dashboard ──────────────────────────────────────────────
   if (isSeller || isAdmin) {
-    const ownListings = await db
-      .select({ id: listing.id, status: listing.status, askingPrice: listing.askingPrice })
-      .from(listing)
-      .where(isAdmin ? undefined : eq(listing.userId, u!.id));
+    const [[{ value: adminCount }], ownListings] = await Promise.all([
+      db.select({ value: count() }).from(user).where(eq(user.role, "admin")),
+      db
+        .select({ id: listing.id, status: listing.status, askingPrice: listing.askingPrice })
+        .from(listing)
+        .where(isAdmin ? undefined : eq(listing.userId, u!.id)),
+    ]);
 
     const listingIds = ownListings.map((l) => l.id);
 
@@ -142,7 +140,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     }
   }
 
-  const [listings, propertyTypesFromListings, [availablePropertiesRow]] = await Promise.all([
+  const [listings, propertyTypesFromListings, [availablePropertiesRow], [{ value: adminCount }]] = await Promise.all([
     db
       .select({
         id: listing.id,
@@ -170,6 +168,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       .select({ value: count() })
       .from(listing)
       .where(eq(listing.status, "published")),
+    db.select({ value: count() }).from(user).where(eq(user.role, "admin")),
   ]);
 
   const listingIds = listings.map((l) => l.id);

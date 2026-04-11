@@ -42,8 +42,8 @@ export default async function HomeLayout({
   const role = (user as { role?: string | null }).role ?? "buyer";
   const isBuyer = role !== "seller" && role !== "admin";
 
-  // ── Notifications (all roles) ──────────────────────────────────────────────
-  const [recentNotifications, [firstUnread]] = await Promise.all([
+  // ── Notifications + buyer offers (all in parallel) ────────────────────────
+  const [recentNotifications, [firstUnread], recentOffers] = await Promise.all([
     db
       .select({
         id: notification.id,
@@ -62,6 +62,22 @@ export default async function HomeLayout({
       .from(notification)
       .where(and(eq(notification.userId, user.id), eq(notification.read, false)))
       .limit(1),
+    isBuyer
+      ? db
+          .select({
+            id: offer.id,
+            listingId: offer.listingId,
+            listingTitle: listing.title,
+            amount: offer.amount,
+            status: offer.status,
+            updatedAt: offer.updatedAt,
+          })
+          .from(offer)
+          .leftJoin(listing, eq(offer.listingId, listing.id))
+          .where(eq(offer.buyerId, user.id))
+          .orderBy(desc(offer.updatedAt))
+          .limit(5)
+      : Promise.resolve([]),
   ]);
 
   const hasUnread = !!firstUnread;
@@ -93,7 +109,6 @@ export default async function HomeLayout({
     };
   });
 
-  // ── Buyer: recent offers ───────────────────────────────────────────────────
   type NavOffer = {
     id: string;
     listingId: string;
@@ -102,23 +117,6 @@ export default async function HomeLayout({
     status: string;
     updatedAt: Date | string;
   };
-  let recentOffers: NavOffer[] = [];
-  if (isBuyer) {
-    recentOffers = await db
-      .select({
-        id: offer.id,
-        listingId: offer.listingId,
-        listingTitle: listing.title,
-        amount: offer.amount,
-        status: offer.status,
-        updatedAt: offer.updatedAt,
-      })
-      .from(offer)
-      .leftJoin(listing, eq(offer.listingId, listing.id))
-      .where(eq(offer.buyerId, user.id))
-      .orderBy(desc(offer.updatedAt))
-      .limit(5);
-  }
 
   // Buyer: topbar layout (no sidebar)
   if (isBuyer) {
