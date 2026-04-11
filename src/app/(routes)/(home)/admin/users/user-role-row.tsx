@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BadgeCheck, UserRoundCog } from "lucide-react";
+import { UserRoundCog } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
+import { Switch } from "@/components/ui/switch";
 
 type Role = "admin" | "seller" | "buyer";
 
@@ -52,18 +53,6 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
     try {
       await patchUser(user.id, { role: next });
       setRole(next);
-      router.refresh();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifiedToggle = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await patchUser(user.id, { verified: !verified });
-      setVerified((v) => !v);
       router.refresh();
     } finally {
       setLoading(false);
@@ -125,19 +114,22 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
         )}
       </td>
       <td className="px-4 py-3">
-        <button
-          onClick={handleVerifiedToggle}
+        <Switch
+          checked={verified}
           disabled={loading}
-          title={verified ? "Revoke verified" : "Mark verified"}
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-            verified
-              ? "bg-primary/10 text-primary hover:bg-destructive/10 hover:text-destructive"
-              : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }`}
-        >
-          <BadgeCheck size={11} />
-          {verified ? "Verified" : "Unverified"}
-        </button>
+          onCheckedChange={async (next) => {
+            if (loading) return;
+            setLoading(true);
+            try {
+              await patchUser(user.id, { verified: next });
+              setVerified(next);
+              router.refresh();
+            } finally {
+              setLoading(false);
+            }
+          }}
+          aria-label={verified ? "Revoke verified status" : "Mark as verified"}
+        />
       </td>
       <td className="px-4 py-3">
         {role === "admin" ? (

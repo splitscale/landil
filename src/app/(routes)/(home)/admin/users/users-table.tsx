@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Copy, BadgeCheck, UserRoundCog, MoreHorizontal } from "lucide-react";
+import { Trash2, Copy, UserRoundCog, MoreHorizontal } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 
 type Role = "admin" | "seller" | "buyer";
 
@@ -133,18 +134,12 @@ function UserRow({
         )}
       </td>
       <td className="px-4 py-3">
-        <button
-          onClick={() => handle({ verified: !verified }, () => setVerified((v) => !v))}
+        <Switch
+          checked={verified}
           disabled={loading}
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-            verified
-              ? "bg-primary/10 text-primary hover:bg-destructive/10 hover:text-destructive"
-              : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }`}
-        >
-          <BadgeCheck size={11} />
-          {verified ? "Verified" : "Unverified"}
-        </button>
+          onCheckedChange={(next) => handle({ verified: next }, () => setVerified(next))}
+          aria-label={verified ? "Revoke verified status" : "Mark as verified"}
+        />
       </td>
       <td className="px-4 py-3">
         {role === "admin" ? (
