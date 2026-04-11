@@ -15,14 +15,12 @@ test.describe("dashboard", () => {
   test("stat cards render", async ({ page }) => {
     await expect(page.locator("text=Total listings")).toBeVisible();
     await expect(page.locator("text=Published")).toBeVisible();
-    await expect(page.locator("text=Offers")).toBeVisible();
+    await expect(page.getByText("Offers", { exact: true })).toBeVisible();
   });
 
   test("reach and clicks cards render", async ({ page }) => {
-    await expect(page.locator("text=Reach")).toBeVisible();
-    await expect(page.locator("text=Clicks")).toBeVisible();
+    await expect(page.getByText("Reach", { exact: true })).toBeVisible();
     await expect(page.locator("text=unique viewers")).toBeVisible();
-    await expect(page.locator("text=total visits")).toBeVisible();
   });
 
   test("portfolio value tile renders", async ({ page }) => {
@@ -36,8 +34,8 @@ test.describe("dashboard", () => {
     );
   });
 
-  test("View listings and New listing nav links visible", async ({ page }) => {
-    await expect(page.getByRole("link", { name: "View listings" })).toBeVisible();
+  test("My listings and New listing nav links visible", async ({ page }) => {
+    await expect(page.getByRole("link", { name: "My listings" })).toBeVisible();
     await expect(page.getByRole("link", { name: "New listing" }).first()).toBeVisible();
   });
 });

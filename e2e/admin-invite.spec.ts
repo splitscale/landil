@@ -28,12 +28,8 @@ test("generate invite then revoke removes it", async ({ page }) => {
   expect(countBefore).toBeGreaterThan(0);
 
   await revokeBtn.first().click();
-  await page.waitForTimeout(2000);
-  const countAfter = await page
-    .getByRole("dialog")
-    .locator('button[title="Revoke"]')
-    .count();
-  expect(countAfter).toBeLessThan(countBefore);
+  // Wait for the revoked row to disappear
+  await expect(page.getByRole("dialog").locator('button[title="Revoke"]')).toHaveCount(countBefore - 1, { timeout: 5000 });
 
   await page.keyboard.press("Escape");
 });

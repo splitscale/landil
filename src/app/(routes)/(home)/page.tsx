@@ -173,7 +173,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     }
   }
 
-  const [listings, propertyTypesFromListings, [availablePropertiesRow], buyerOffers] = await Promise.all([
+  const [listings, propertyTypesFromListings, [availablePropertiesRow], recentOffers] = await Promise.all([
     db
       .select({
         id: listing.id,
@@ -202,9 +202,20 @@ export default async function Home({ searchParams }: HomePageProps) {
       .from(listing)
       .where(eq(listing.status, "published")),
     db
-      .select({ listingId: offer.listingId, status: offer.status })
+      .select({
+        id: offer.id,
+        listingId: offer.listingId,
+        listingTitle: listing.title,
+        amount: offer.amount,
+        status: offer.status,
+        createdAt: offer.createdAt,
+        updatedAt: offer.updatedAt,
+      })
       .from(offer)
-      .where(eq(offer.buyerId, u.id)),
+      .leftJoin(listing, eq(offer.listingId, listing.id))
+      .where(eq(offer.buyerId, u.id))
+      .orderBy(desc(offer.updatedAt))
+      .limit(10),
   ]);
 
   const listingIds = listings.map((l) => l.id);
@@ -224,8 +235,8 @@ export default async function Home({ searchParams }: HomePageProps) {
   }
 
   const availablePropertiesCount = availablePropertiesRow?.value ?? 0;
-  const trackedListingsCount = new Set(buyerOffers.map((o) => o.listingId)).size;
-  const activeOffersCount = buyerOffers.filter((o) => o.status === "pending" || o.status === "countered").length;
+  const activeOffersCount = recentOffers.filter((o) => o.status === "pending" || o.status === "countered").length;
+  const trackedListingsCount = new Set(recentOffers.map((o) => o.listingId)).size;
   const allPropertyTypeOptions = Array.from(
     new Set([
       ...listingPropertyTypes,
@@ -234,38 +245,33 @@ export default async function Home({ searchParams }: HomePageProps) {
   );
   const hasActiveFilters = query.length > 0 || propertyTypeFilter !== "all" || priceRangeFilter !== "all";
 
+  const OFFER_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+    pending:   { label: "Pending",   color: "text-amber-600 dark:text-amber-400" },
+    accepted:  { label: "Accepted",  color: "text-green-600 dark:text-green-400" },
+    rejected:  { label: "Rejected",  color: "text-destructive" },
+    countered: { label: "Countered", color: "text-blue-600 dark:text-blue-400" },
+    withdrawn: { label: "Withdrawn", color: "text-muted-foreground" },
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8">
       {adminCount === 0 && <SetupAdminDialog />}
 
-      <div className="rounded-2xl border border-border bg-linear-to-br from-muted/60 via-background to-background p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {u.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Find active listings faster with search and filters.</p>
-          </div>
+      {/* Header + compact stats */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Browse listings</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{availablePropertiesCount} properties available</p>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{activeOffersCount}</span> active offer{activeOffersCount !== 1 ? "s" : ""}
+          </span>
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">{trackedListingsCount}</span> tracked
+          </span>
         </div>
       </div>
-
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Available properties</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight">{availablePropertiesCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Total listings you can browse right now</p>
-        </article>
-
-        <article className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Tracked listings</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight">{trackedListingsCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Listings where you have submitted offers</p>
-        </article>
-
-        <article className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Active offers</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight">{activeOffersCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Offers pending seller response or counter</p>
-        </article>
-      </section>
 
       <form className="rounded-xl border border-border/60 bg-background/60 p-3 sm:p-4">
         <div className="grid gap-3 lg:grid-cols-[1.4fr,1fr,1fr,auto]">
@@ -332,52 +338,87 @@ export default async function Home({ searchParams }: HomePageProps) {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {listings.map((item) => (
-              <article key={item.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="mb-3 overflow-hidden rounded-lg border border-border/70 bg-muted/40">
-                  {firstPhotoByListingId.get(item.id) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={firstPhotoByListingId.get(item.id)}
-                      alt={`${item.title} property image`}
-                      className="h-40 w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center text-xs text-muted-foreground">
-                      No property image
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin size={10} />
-                      {item.city}, {item.province}
-                    </p>
+              <article key={item.id} className="group rounded-xl border border-border bg-card transition-shadow hover:shadow-md">
+                <Link href={`/listings/${item.id}`} className="block p-4">
+                  <div className="mb-3 overflow-hidden rounded-lg border border-border/70 bg-muted/40">
+                    {firstPhotoByListingId.get(item.id) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={firstPhotoByListingId.get(item.id)}
+                        alt={`${item.title} property image`}
+                        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-40 w-full items-center justify-center text-xs text-muted-foreground">
+                        No property image
+                      </div>
+                    )}
                   </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {item.propertyType}
-                  </span>
-                </div>
 
-                <p className="mt-3 text-sm font-semibold">{formatPrice(item.askingPrice)}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{item.lotArea} sqm</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{item.title}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin size={10} />
+                        {item.city}, {item.province}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {item.propertyType}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-sm font-semibold">{formatPrice(item.askingPrice)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{item.lotArea} sqm</p>
+                </Link>
 
                 {item.sellerUsername && (
-                  <Link
-                    href={`/u/${item.sellerUsername}`}
-                    className="mt-3 inline-flex text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Seller: {item.sellerName ?? item.sellerUsername}
-                  </Link>
+                  <div className="border-t border-border/60 px-4 py-2">
+                    <Link
+                      href={`/u/${item.sellerUsername}`}
+                      className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      Seller: {item.sellerName ?? item.sellerUsername}
+                    </Link>
+                  </div>
                 )}
               </article>
             ))}
           </div>
         )}
       </div>
+
+      {/* Recent offer activity */}
+      {recentOffers.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-medium text-muted-foreground">Recent offer activity</h2>
+          <div className="rounded-xl border border-border divide-y divide-border">
+            {recentOffers.map((o) => {
+              const s = OFFER_STATUS_LABEL[o.status] ?? { label: o.status, color: "text-muted-foreground" };
+              return (
+                <div key={o.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/listings/${o.listingId}`}
+                      className="truncate text-sm font-medium hover:underline"
+                    >
+                      {o.listingTitle ?? "Listing"}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {new Date(o.updatedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold">{formatPrice(o.amount)}</p>
+                    <p className={`text-xs font-medium ${s.color}`}>{s.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ test.describe("impersonation", () => {
     await page.waitForLoadState("networkidle");
 
     // Banner visible
-    await expect(page.locator("text=/Impersonating/i").first()).toBeVisible();
+    await expect(page.locator("text=/Admin mode/i").first()).toBeVisible();
     await expect(page.locator("button", { hasText: "Exit" })).toBeVisible();
 
     // No Admin nav link while impersonating buyer
@@ -36,7 +36,7 @@ test.describe("impersonation", () => {
 
     // Banner gone
     expect(
-      await page.locator("text=/Impersonating/i").isVisible().catch(() => false),
+      await page.locator("text=/Admin mode/i").isVisible().catch(() => false),
     ).toBe(false);
   });
 });
