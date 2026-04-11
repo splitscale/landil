@@ -3,9 +3,10 @@ export function formatPrice(pesos: number) {
   return `₱${pesos.toLocaleString("en-PH")}`;
 }
 
-/** Format a date/ISO string as "Jan 1, 1:00 PM" */
+/** Format a date/ISO string as "Jan 1, 1:00 PM" using the runtime locale/timezone.
+ * Call this only from client components — on the server it uses UTC. */
 export function formatTime(iso: Date | string) {
-  return new Date(iso).toLocaleString("en-PH", {
+  return new Date(iso).toLocaleString(undefined, {
     month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
   });
 }

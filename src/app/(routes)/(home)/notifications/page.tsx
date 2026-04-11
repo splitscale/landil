@@ -7,7 +7,7 @@ import { offer } from "@/db/schema/marketplace";
 import { getServerSession } from "@/lib/auth/get-session";
 import { after } from "next/server";
 import Link from "next/link";
-import { formatTime } from "@/lib/format";
+import { FormattedTime } from "@/components/formatted-time";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -82,7 +82,7 @@ export default async function NotificationsPage() {
                     {n.type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
                   </span>
                 </div>
-                <p className="mt-2 text-[10px] text-muted-foreground">{formatTime(n.createdAt)}</p>
+                <FormattedTime date={n.createdAt} className="mt-2 text-[10px] text-muted-foreground" />
               </div>
             );
 
