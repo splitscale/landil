@@ -83,6 +83,8 @@ export type NotificationEmailParams = {
   listingId?: string;
   /** true = recipient is buyer */
   isBuyer?: boolean;
+  /** formatted counter amount string e.g. "₱480,000" */
+  counterAmount?: string;
 };
 
 export async function sendNotificationEmail({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatTime } from "@/lib/format";
@@ -27,6 +27,7 @@ type Props = {
   offerId: string;
   listingId: string;
   currentUserId: string;
+  currentUserName?: string;
   messages: Message[];
   isBuyer: boolean;
   canWithdraw?: boolean;
@@ -51,36 +52,79 @@ export default function OfferThreadClient({
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawConfirm, setWithdrawConfirm] = useState("");
   const [dangerOpen, setDangerOpen] = useState(false);
+  const [typingName, setTypingName] = useState<string | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // SSE: real-time messages
+  // SSE: real-time messages + typing indicators
   useEffect(() => {
     const es = new EventSource(`/api/listings/${listingId}/offers/${offerId}/stream`);
 
     es.onmessage = (e) => {
       try {
-        const msg = JSON.parse(e.data) as { id: string; content: string; senderId: string; createdAt: string };
-        // Ignore messages sent by self (already optimistically added)
-        if (msg.senderId === currentUserId) return;
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, { ...msg, senderName: "Them" }];
-        });
+        const event = JSON.parse(e.data) as {
+          type?: string;
+          id?: string;
+          content?: string;
+          senderId: string;
+          senderName?: string;
+          createdAt?: string;
+        };
+
+        if (event.senderId === currentUserId) return; // ignore own events
+
+        if (event.type === "typing") {
+          setTypingName(event.senderName ?? "Them");
+          // Auto-clear after 3 s of silence
+          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+          typingTimerRef.current = setTimeout(() => setTypingName(null), 3000);
+          return;
+        }
+
+        // type === "message" (or legacy without type field)
+        if (event.id && event.content && event.createdAt) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === event.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: event.id!,
+                content: event.content!,
+                senderId: event.senderId,
+                senderName: event.senderName ?? "Them",
+                createdAt: event.createdAt!,
+              },
+            ];
+          });
+          // Clear typing indicator when message arrives
+          setTypingName(null);
+          if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        }
       } catch { /* malformed */ }
     };
 
-    es.onerror = () => {
-      // SSE disconnected — silently degrade; page refresh will sync
-      es.close();
-    };
+    es.onerror = () => { es.close(); };
 
-    return () => es.close();
+    return () => {
+      es.close();
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
   }, [offerId, listingId, currentUserId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Throttled typing indicator — fire at most once per 1.5 s
+  const sendTyping = useCallback(() => {
+    if (typingThrottleRef.current) return;
+    typingThrottleRef.current = setTimeout(() => {
+      typingThrottleRef.current = null;
+    }, 1500);
+    fetch(`/api/listings/${listingId}/offers/${offerId}/typing`, { method: "POST" }).catch(() => {});
+  }, [listingId, offerId]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +215,18 @@ export default function OfferThreadClient({
             <div ref={bottomRef} />
           </div>
         )}
+
+        {/* Typing indicator */}
+        {typingName && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="flex gap-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:300ms]" />
+            </span>
+            {typingName} is typing…
+          </div>
+        )}
       </div>
 
       {/* Send message */}
@@ -179,7 +235,7 @@ export default function OfferThreadClient({
         <input
           id="thread-message"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); sendTyping(); }}
           placeholder="Send a message…"
           className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
         />
@@ -238,7 +294,7 @@ export default function OfferThreadClient({
         </div>
       )}
 
-      {/* Buyer: danger zone (collapsed by default to prevent accidental withdrawal) */}
+      {/* Buyer: danger zone (collapsed by default) */}
       {isBuyer && canWithdraw && (
         <div className="border-t border-border pt-4">
           <button
@@ -267,7 +323,10 @@ export default function OfferThreadClient({
             </div>
           )}
 
-          <AlertDialog open={withdrawOpen} onOpenChange={(v) => { setWithdrawOpen(v); if (!v) setWithdrawConfirm(""); }}>
+          <AlertDialog
+            open={withdrawOpen}
+            onOpenChange={(v) => { setWithdrawOpen(v); if (!v) setWithdrawConfirm(""); }}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Withdraw your offer?</AlertDialogTitle>

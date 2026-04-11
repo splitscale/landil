@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
 import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
+import { user } from "@/db/schema/auth/user";
 import { createNotification } from "@/lib/notifications";
+import { sendNotificationEmail } from "@/lib/email";
+import { formatPrice } from "@/lib/format";
 
 const BodySchema = z.object({
   status: z.enum(["accepted", "rejected", "countered", "withdrawn"]),
@@ -22,17 +25,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const u = session.user as { id: string; role?: string };
   const isAdmin = u.role === "admin";
 
+  // Fetch offer + both parties' emails in one query
   const [o] = await db
     .select({
       id: offer.id,
       listingId: offer.listingId,
       buyerId: offer.buyerId,
+      amount: offer.amount,
       status: offer.status,
       sellerId: listing.userId,
       listingTitle: listing.title,
+      buyerEmail: user.email,
+      buyerName: user.name,
     })
     .from(offer)
     .leftJoin(listing, eq(offer.listingId, listing.id))
+    .leftJoin(user, eq(user.id, offer.buyerId))
     .where(eq(offer.id, offerId));
 
   if (!o || o.listingId !== id) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -65,7 +73,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     await db.update(listing).set({ status: "sold" }).where(eq(listing.id, id));
   }
 
-  // Notify other party
+  // Determine who to notify and their email
   const notifyUserId = status === "withdrawn" ? o.sellerId! : o.buyerId;
   const notifyTitle =
     status === "accepted" ? "Offer accepted" :
@@ -78,6 +86,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     status === "countered" ? `The seller countered your offer on "${o.listingTitle}".` :
     `An offer on "${o.listingTitle}" was withdrawn.`;
 
+  // In-app notification
   if (notifyUserId) {
     await createNotification({
       userId: notifyUserId,
@@ -86,6 +95,40 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       body: notifyBody,
       relatedId: offerId,
     });
+  }
+
+  // Email notification — buyer gets notified for accepted/rejected/countered
+  // Seller gets notified for withdrawn
+  if (status !== "withdrawn" && o.buyerEmail) {
+    sendNotificationEmail({
+      recipientEmail: o.buyerEmail,
+      type: `offer_${status}`,
+      title: notifyTitle,
+      body: notifyBody,
+      offerId,
+      listingId: id,
+      isBuyer: true,
+      ...(status === "countered" && counterAmount
+        ? { counterAmount: formatPrice(counterAmount) }
+        : {}),
+    }).catch(() => {});
+  } else if (status === "withdrawn" && o.sellerId) {
+    // Fetch seller email for withdrawal notification
+    const [seller] = await db
+      .select({ email: user.email })
+      .from(user)
+      .where(eq(user.id, o.sellerId));
+    if (seller?.email) {
+      sendNotificationEmail({
+        recipientEmail: seller.email,
+        type: "offer_withdrawn",
+        title: notifyTitle,
+        body: notifyBody,
+        offerId,
+        listingId: id,
+        isBuyer: false,
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json({ ok: true });

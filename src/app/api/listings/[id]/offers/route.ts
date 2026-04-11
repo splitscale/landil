@@ -6,6 +6,8 @@ import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
 import { createNotification } from "@/lib/notifications";
+import { sendNotificationEmail } from "@/lib/email";
+import { user } from "@/db/schema/auth/user";
 
 const BodySchema = z.object({
   amount: z.number().int().positive(),
@@ -24,8 +26,16 @@ export async function POST(
   const u = session.user as { id: string; role?: string };
 
   const [l] = await db
-    .select({ id: listing.id, userId: listing.userId, title: listing.title, status: listing.status })
+    .select({
+      id: listing.id,
+      userId: listing.userId,
+      title: listing.title,
+      status: listing.status,
+      sellerEmail: user.email,
+      sellerName: user.name,
+    })
     .from(listing)
+    .leftJoin(user, eq(user.id, listing.userId))
     .where(eq(listing.id, id));
 
   if (!l || (l.status !== "published" && l.status !== "sold")) {
@@ -62,7 +72,7 @@ export async function POST(
 
   await db.insert(offer).values(newOffer);
 
-  // Notify seller
+  // Notify seller (in-app + email)
   await createNotification({
     userId: l.userId,
     type: "new_offer",
@@ -70,6 +80,18 @@ export async function POST(
     body: `Someone made an offer on "${l.title}"`,
     relatedId: newOffer.id,
   });
+
+  if (l.sellerEmail) {
+    sendNotificationEmail({
+      recipientEmail: l.sellerEmail,
+      type: "new_offer",
+      title: "New offer received",
+      body: `Someone made an offer on "${l.title}"`,
+      offerId: newOffer.id,
+      listingId: id,
+      isBuyer: false,
+    }).catch(() => {}); // fire-and-forget
+  }
 
   return NextResponse.json({ id: newOffer.id }, { status: 201 });
 }

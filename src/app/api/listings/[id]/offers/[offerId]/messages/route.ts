@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const pub = getPublisher();
     await pub.publish(
       offerChannel(offerId),
-      JSON.stringify({ id: msg.id, content: parsed.data.content, senderId: u.id, createdAt: new Date().toISOString() }),
+      JSON.stringify({ type: "message", id: msg.id, content: parsed.data.content, senderId: u.id, createdAt: new Date().toISOString() }),
     );
   } catch {
     // Redis unavailable — SSE won't get real-time update, page refresh will
