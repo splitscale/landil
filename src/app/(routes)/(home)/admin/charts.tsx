@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Legend } from "recharts";
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Legend, CartesianGrid } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 type NameValue = { name: string; value: number };
@@ -32,18 +32,26 @@ function DonutChart({ config, data }: { config: ChartConfig; data: NameValue[] }
   );
 }
 
-// ── Generic bar ──────────────────────────────────────────────────────────────
+// ── Generic line ─────────────────────────────────────────────────────────────
 
-function TimeSeriesBar({ config, data, dataKey }: { config: ChartConfig; data: DateCount[]; dataKey: string }) {
+function TimeSeriesLine({ config, data, dataKey }: { config: ChartConfig; data: DateCount[]; dataKey: string }) {
   const color = config[dataKey]?.color ?? "var(--chart-1)";
   return (
     <ChartContainer config={config} className="h-[220px] w-full">
-      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+      <LineChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
         <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} />
         <YAxis allowDecimals={false} tick={axisStyle} tickLine={false} axisLine={false} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Bar dataKey={dataKey} fill={color} radius={[3, 3, 0, 0]} />
-      </BarChart>
+        <Line
+          type="monotone"
+          dataKey={dataKey}
+          stroke={color}
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4, strokeWidth: 0 }}
+        />
+      </LineChart>
     </ChartContainer>
   );
 }
@@ -64,7 +72,7 @@ const statusConfig: ChartConfig = {
 const signupsConfig: ChartConfig  = { signups:  { label: "Signups",  color: "var(--chart-1)" } };
 const listingsConfig: ChartConfig = { listings: { label: "Listings", color: "var(--chart-2)" } };
 
-export const RoleDonut   = ({ data }: { data: NameValue[] }) => <DonutChart config={roleConfig} data={data} />;
-export const StatusDonut = ({ data }: { data: NameValue[] }) => <DonutChart config={statusConfig} data={data} />;
-export const SignupsBar  = ({ data }: { data: DateCount[] }) => <TimeSeriesBar config={signupsConfig} data={data} dataKey="signups" />;
-export const ListingsBar = ({ data }: { data: DateCount[] }) => <TimeSeriesBar config={listingsConfig} data={data} dataKey="listings" />;
+export const RoleDonut    = ({ data }: { data: NameValue[] }) => <DonutChart config={roleConfig} data={data} />;
+export const StatusDonut  = ({ data }: { data: NameValue[] }) => <DonutChart config={statusConfig} data={data} />;
+export const SignupsLine  = ({ data }: { data: DateCount[] }) => <TimeSeriesLine config={signupsConfig} data={data} dataKey="signups" />;
+export const ListingsLine = ({ data }: { data: DateCount[] }) => <TimeSeriesLine config={listingsConfig} data={data} dataKey="listings" />;

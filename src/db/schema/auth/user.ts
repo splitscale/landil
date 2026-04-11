@@ -12,6 +12,9 @@ export const user = pgTable("user", {
   gender: boolean("gender").notNull(),
   verified: boolean("verified").default(false).notNull(),
   plan: text("plan", { enum: ["free", "pro"] }).default("free").notNull(),
+  banned: boolean("banned").default(false),
+  banReason: text("banReason"),
+  banExpires: timestamp("banExpires"),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
