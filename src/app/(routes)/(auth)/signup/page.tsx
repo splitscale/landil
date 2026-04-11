@@ -1,6 +1,7 @@
 import { type Metadata } from "next";
 import Link from "next/link";
 import SignUpForm from "./form";
+import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "Create Account",
@@ -9,10 +10,13 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center p-10">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center p-10 pb-16">
       <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
 
         <div className="mb-6">
+          <Link href="/" className="mb-4 inline-block text-xl font-bold tracking-tight">
+            Landil
+          </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Create an account
           </h1>
@@ -29,6 +33,10 @@ export default function SignUpPage() {
             Sign In
           </Link>
         </div>
+      </div>
+
+      <div className="absolute bottom-0 w-full">
+        <Footer />
       </div>
     </div>
   );

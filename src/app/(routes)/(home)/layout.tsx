@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { eq, and, desc, inArray } from "drizzle-orm";
-import { buttonVariants } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { getServerSession } from "@/lib/auth/get-session";
 import { db } from "@/db";
@@ -11,6 +9,7 @@ import AppSidebar from "@/app/(routes)/(home)/components/app-sidebar";
 import Navbar from "@/app/(routes)/(home)/components/navbar";
 import ImpersonationBanner from "@/app/(routes)/(home)/components/impersonation-banner";
 import Breadcrumbs from "@/app/(routes)/(home)/components/breadcrumbs";
+import Footer from "@/components/footer";
 
 export default async function HomeLayout({
   children,
@@ -22,19 +21,11 @@ export default async function HomeLayout({
 
   if (!user) {
     return (
-      <>
-        <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
-          <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-            <Link href="/" className="text-sm font-semibold tracking-tight">
-              Landil
-            </Link>
-            <Link href="/signin" className={buttonVariants({ variant: "default", size: "sm" })}>
-              Sign in
-            </Link>
-          </div>
-        </header>
-        <main>{children}</main>
-      </>
+      <div className="flex flex-col min-h-svh">
+        <Navbar user={null} />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </div>
     );
   }
 
@@ -130,6 +121,7 @@ export default async function HomeLayout({
           hasUnread={hasUnread}
         />
         <main className="flex-1">{children}</main>
+        <Footer />
       </div>
     );
   }
@@ -147,6 +139,7 @@ export default async function HomeLayout({
             <Breadcrumbs />
           </header>
           <main className="flex-1">{children}</main>
+          <Footer />
         </SidebarInset>
       </SidebarProvider>
     </div>

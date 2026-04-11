@@ -73,6 +73,16 @@
       "sourceType": "github",
       "computedHash": "4fef84bd15b15ac3a5182f85273d7ab4ea43edafee9fdb282916ff79dadca12d"
     },
+    "tanstack-integration-best-practices": {
+      "source": "DeckardGer/tanstack-agent-skills",
+      "sourceType": "github",
+      "computedHash": "f8454d0835f04539c0d90a5a481937bc0e1cd7e31ac8610f302abd3421f3d24a"
+    },
+    "tanstack-query-best-practices": {
+      "source": "DeckardGer/tanstack-agent-skills",
+      "sourceType": "github",
+      "computedHash": "21d2e8b7468a81d772b6527ad8ca178cc2f3f08af777bb9061333013ee88a0c9"
+    },
     "two-factor-authentication-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",

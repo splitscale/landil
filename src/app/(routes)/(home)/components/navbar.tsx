@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import SettingsDialog from "./settings-dialog";
+import SignInModal from "@/components/ui/sign-in-modal";
 import { initials } from "@/lib/utils/initials";
 import { formatPrice } from "@/lib/format";
 import { OFFER_STATUS_LABEL } from "@/lib/listings-browse";
@@ -69,6 +70,7 @@ export default function Navbar({
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -82,7 +84,7 @@ export default function Navbar({
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
           {/* Brand */}
           <Link href="/" className="text-sm font-semibold tracking-tight">
             Landil
@@ -260,12 +262,12 @@ export default function Navbar({
               </DropdownMenu>
             </div>
           ) : (
-            <Link
-              href="/signin"
+            <button
+              onClick={() => setSignInOpen(true)}
               className={cn(buttonVariants({ variant: "default", size: "sm" }))}
             >
               Sign in
-            </Link>
+            </button>
           )}
         </div>
       </header>
@@ -273,6 +275,7 @@ export default function Navbar({
       {user && (
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
       )}
+      <SignInModal open={signInOpen} onOpenChange={setSignInOpen} />
     </>
   );
 }
