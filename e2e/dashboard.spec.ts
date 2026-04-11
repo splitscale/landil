@@ -15,11 +15,13 @@ test.describe("dashboard", () => {
   test("stat cards render", async ({ page }) => {
     await expect(page.locator("text=Total listings")).toBeVisible();
     await expect(page.locator("text=Published")).toBeVisible();
-    await expect(page.getByText("Offers", { exact: true })).toBeVisible();
+    // Use .first() — "Offers" also appears in the chart legend when data is present
+    await expect(page.getByText("Offers", { exact: true }).first()).toBeVisible();
   });
 
   test("reach and clicks cards render", async ({ page }) => {
-    await expect(page.getByText("Reach", { exact: true })).toBeVisible();
+    // Use .first() — "Reach" also appears in the chart legend when data is present
+    await expect(page.getByText("Reach", { exact: true }).first()).toBeVisible();
     await expect(page.locator("text=unique viewers")).toBeVisible();
   });
 
@@ -59,8 +61,9 @@ test.describe("view tracking", () => {
     await page.goto(href!);
     await page.waitForLoadState("networkidle");
 
-    await expect(page.locator("text=reach")).toBeVisible();
-    await expect(page.locator("text=clicks")).toBeVisible();
+    // Use .first() — recharts Legend also renders "reach"/"clicks" as dataKey labels
+    await expect(page.locator("text=reach").first()).toBeVisible();
+    await expect(page.locator("text=clicks").first()).toBeVisible();
   });
 
   test("reach and clicks are numeric", async ({ page }) => {
@@ -77,9 +80,9 @@ test.describe("view tracking", () => {
     await page.goto(href!);
     await page.waitForLoadState("networkidle");
 
-    // Find the reach/clicks container and verify both have numeric values
-    const reachText = await page.locator("text=reach").locator("..").textContent();
-    const clicksText = await page.locator("text=clicks").locator("..").textContent();
+    // Find the reach/clicks stat header cells (use .first() — recharts Legend also renders these labels)
+    const reachText = await page.locator("text=reach").first().locator("..").textContent();
+    const clicksText = await page.locator("text=clicks").first().locator("..").textContent();
 
     expect(reachText).toMatch(/\d/);
     expect(clicksText).toMatch(/\d/);

@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth/get-session";
 import { db } from "@/db";
 import { listing, listingPhoto, listingDoc } from "@/db/schema/listings";
+import { user } from "@/db/schema/auth/user";
 import { ListingSchema } from "@/app/(routes)/(home)/listings/new/validate";
 
 const EditPhotoSchema = z.object({
@@ -44,6 +45,9 @@ export async function PATCH(
     .where(and(eq(listing.id, id), eq(listing.userId, session.user.id)));
   if (!l) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const [owner] = await db.select({ plan: user.plan, role: user.role }).from(user).where(eq(user.id, session.user.id));
+  const isPro = owner?.plan === "pro" || owner?.role === "admin";
+
   const raw = await req.json();
   const parsed = BodySchema.safeParse(raw);
   if (!parsed.success) {
@@ -51,6 +55,10 @@ export async function PATCH(
   }
 
   const { status, values, photos, docs } = parsed.data;
+  const sanitisedDocs = docs.map((d) => ({
+    ...d,
+    visibility: isPro ? d.visibility : "public" as const,
+  }));
 
   const askingPrice = parseInt(values.askingPrice.replace(/,/g, ""), 10);
   if (isNaN(askingPrice)) {
@@ -96,9 +104,9 @@ export async function PATCH(
 
     // Docs: delete all then re-insert
     await tx.delete(listingDoc).where(eq(listingDoc.listingId, id));
-    if (docs.length > 0) {
+    if (sanitisedDocs.length > 0) {
       await tx.insert(listingDoc).values(
-        docs.map((d) => ({
+        sanitisedDocs.map((d) => ({
           id: d.dbId ?? crypto.randomUUID(),
           listingId: id,
           url: d.url,

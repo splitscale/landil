@@ -4,7 +4,7 @@
 - [x] Listing detail page (photos, specs, title info, docs)
 - [ ] Title / LRA check display
 - [ ] BIR zonal value lookup + tax simulator
-- [ ] Comparable listings (comps) view
+- [x] Comparable listings (comps) view
 - [x] Make offer flow
 
 ## Seller side
@@ -13,7 +13,7 @@
 - [x] Bids/offers inbox per listing (pro + admin only, upgrade prompt for free)
 - [x] Document viewer per listing (public/private sections, download links)
 - [x] Listing edit page (4-step wizard, pre-populated, PATCH API, photo/doc diffing)
-- [ ] Valuation panel — zonal price + market trends (pro only)
+- [x] Valuation panel — zonal price + market trends (pro only)
 
 ## User profiles
 - [x] Public profile page (/u/[username]) — name, avatar, posted listings
@@ -29,16 +29,16 @@
 
 ### Limits (free tier)
 - [x] Block listing creation if over free cap (admin-exempt)
-- [ ] Lock private doc visibility to pro sellers only
+- [x] Lock private doc visibility to pro sellers only
 - [x] Gate offers/bids inbox behind upgrade prompt
-- [ ] Gate valuation tools behind upgrade prompt
-- [ ] Gate verified seller badge eligibility to pro
+- [x] Gate valuation tools behind upgrade prompt
+- [x] Gate verified seller badge eligibility to pro
 
 ### Upgrade flow
 - [x] Upgrade prompt UI (shown at gated features)
 - [ ] Payment integration (PayMongo for PH)
 - [ ] Webhook to flip user.plan to pro on payment success
-- [ ] Plan badge on seller profile
+- [x] Plan badge on seller profile
 
 ## Admin panel
 - [x] Sub-nav layout: Overview / Users / Listings tabs
@@ -65,7 +65,7 @@
 - [ ] Verified registry badge (manual or automated verification)
 - [x] Offer negotiation thread (buyer ↔ seller messaging)
 - [x] Notifications (new offer, offer status change, new message)
-- [ ] Email on invite generation / claim
+- [x] Email on invite generation / claim
 
 ## Done (infrastructure)
 - [x] Listing creation form (photos, docs, property specs, title details)

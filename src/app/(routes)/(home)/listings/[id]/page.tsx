@@ -1,6 +1,6 @@
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, ne, avg, sql } from "drizzle-orm";
 import { after } from "next/server";
 import Link from "next/link";
 import { db } from "@/db";
@@ -9,10 +9,12 @@ import { offer } from "@/db/schema/marketplace";
 import { user } from "@/db/schema/auth/user";
 import { getServerSession } from "@/lib/auth/get-session";
 import { trackListingView } from "@/lib/track-view";
+import { formatPrice } from "@/lib/format";
 import AnalyticsChart from "./analytics-chart";
 import OffersChart from "./offers-chart";
 import MakeOfferDialog from "./make-offer-dialog";
-import { MapPin, FileText, MessageSquare, Sparkles, Pencil, Globe, Lock } from "lucide-react";
+import ListingCard from "@/app/(routes)/(home)/components/listing-card";
+import { MapPin, FileText, MessageSquare, Sparkles, Pencil, Globe, Lock, TrendingUp } from "lucide-react";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -20,10 +22,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const [l] = await db.select({ title: listing.title }).from(listing).where(eq(listing.id, id));
   return { title: l ? l.title : "Listing not found" };
-}
-
-function formatPrice(pesos: number) {
-  return `₱${pesos.toLocaleString("en-PH")}`;
 }
 
 export default async function ListingDetailPage({ params }: Props) {
@@ -76,6 +74,37 @@ export default async function ListingDetailPage({ params }: Props) {
   const privateDocs = docs.filter((d) => d.visibility === "private");
   const seller = sellerInfo[0];
 
+  // Comparable listings — same province, published, exclude self (buyer view)
+  const comps = canManage ? [] : await db
+    .select({
+      id: listing.id,
+      title: listing.title,
+      city: listing.city,
+      province: listing.province,
+      askingPrice: listing.askingPrice,
+      lotArea: listing.lotArea,
+      propertyType: listing.propertyType,
+    })
+    .from(listing)
+    .where(and(eq(listing.province, l.province), eq(listing.status, "published"), ne(listing.id, id)))
+    .limit(4);
+
+  // Valuation panel — avg price/sqm in same province (seller/pro view)
+  let valuationData: { avgPricePerSqm: number | null; compsCount: number } | null = null;
+  if (canManage && isPro) {
+    const [row] = await db
+      .select({
+        avgPricePerSqm: avg(sql<number>`${listing.askingPrice}::float / NULLIF(${listing.lotArea}::float, 0)`),
+        compsCount: count(),
+      })
+      .from(listing)
+      .where(and(eq(listing.province, l.province), eq(listing.status, "published"), ne(listing.id, id)));
+    valuationData = {
+      avgPricePerSqm: row?.avgPricePerSqm ? Math.round(Number(row.avgPricePerSqm)) : null,
+      compsCount: row?.compsCount ?? 0,
+    };
+  }
+
   after(() => trackListingView(id, l.userId, u.id));
 
   // ── Seller / Admin view ──────────────────────────────────────────────────
@@ -112,6 +141,58 @@ export default async function ListingDetailPage({ params }: Props) {
           <AnalyticsChart listingId={id} />
           {isPro && <OffersChart listingId={id} />}
         </div>
+
+        {/* Valuation panel */}
+        {isPro ? (
+          valuationData && valuationData.compsCount > 0 ? (
+            <div className="rounded-xl border border-border p-4 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <TrendingUp size={12} />
+                Market valuation — {l.province}
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-[10px] text-muted-foreground">Market avg/sqm</p>
+                  <p className="mt-0.5 text-sm font-semibold">{formatPrice(valuationData.avgPricePerSqm ?? 0)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-[10px] text-muted-foreground">Your asking/sqm</p>
+                  <p className="mt-0.5 text-sm font-semibold">{formatPrice(Math.round(l.askingPrice / parseFloat(l.lotArea)))}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-[10px] text-muted-foreground">Based on</p>
+                  <p className="mt-0.5 text-sm font-semibold">{valuationData.compsCount} listing{valuationData.compsCount !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+              {valuationData.avgPricePerSqm && (
+                <p className="text-xs text-muted-foreground">
+                  {Math.round(l.askingPrice / parseFloat(l.lotArea)) > valuationData.avgPricePerSqm
+                    ? `Your listing is priced ${Math.round(((l.askingPrice / parseFloat(l.lotArea)) / valuationData.avgPricePerSqm - 1) * 100)}% above market average.`
+                    : `Your listing is priced ${Math.round((1 - (l.askingPrice / parseFloat(l.lotArea)) / valuationData.avgPricePerSqm) * 100)}% below market average.`}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border p-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mb-1 font-medium">
+                <TrendingUp size={12} />
+                Market valuation
+              </div>
+              Not enough comparable listings in {l.province} yet.
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-between rounded-xl border border-dashed border-border p-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp size={14} />
+              Valuation panel
+            </div>
+            <span className="flex items-center gap-1 text-xs text-primary">
+              <Sparkles size={10} />
+              Pro only
+            </span>
+          </div>
+        )}
 
         {/* Key details */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -292,6 +373,21 @@ export default async function ListingDetailPage({ params }: Props) {
           <MakeOfferDialog listingId={id} askingPrice={l.askingPrice} />
         )}
       </div>
+
+      {/* Comparable listings */}
+      {comps.length > 0 && (
+        <div className="border-t border-border pt-6 space-y-3">
+          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            <MapPin size={11} />
+            Similar listings in {l.province}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {comps.map((c) => (
+              <ListingCard key={c.id} item={c} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,41 +10,18 @@ import { offer } from "@/db/schema/marketplace";
 import { user } from "@/db/schema/auth/user";
 import SetupAdminDialog from "./components/setup-admin-dialog";
 import DashboardCharts from "./components/dashboard-charts";
+import ListingCard from "./components/listing-card";
+import ListingFilterBar from "./components/listing-filter-bar";
 import { propertyTypes as listingPropertyTypes } from "@/app/(routes)/(home)/listings/new/validate";
-import {
-  LayoutList, MapPin, Search, MessageSquare, TrendingUp, FileText, Eye,
-} from "lucide-react";
+import { formatPrice, formatPriceShort } from "@/lib/format";
+import { PRICE_RANGES, OFFER_STATUS_LABEL } from "@/lib/listings-browse";
+import { LayoutList, MessageSquare, TrendingUp, FileText, Eye } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Dashboard",
   description:
     "Manage your land listings, review bids, and track due diligence from your Landil dashboard.",
 };
-
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
-function formatPrice(pesos: number) {
-  return `₱${pesos.toLocaleString("en-PH")}`;
-}
-function formatPriceFull(pesos: number) {
-  return `₱${pesos.toLocaleString("en-PH")}`;
-}
-function formatPriceShort(pesos: number) {
-  if (pesos >= 1_000_000) return `₱${(pesos / 1_000_000).toFixed(1)}M`;
-  if (pesos >= 1_000) return `₱${(pesos / 1_000).toFixed(0)}K`;
-  return `₱${pesos.toLocaleString("en-PH")}`;
-}
-
-// ── Price ranges for buyer browse ─────────────────────────────────────────────
-
-const PRICE_RANGES = [
-  { value: "all", label: "All price ranges" },
-  { value: "under-1m", label: "Under PHP 1M", min: 0, max: 999_999 },
-  { value: "1m-3m", label: "PHP 1M - 3M", min: 1_000_000, max: 3_000_000 },
-  { value: "3m-5m", label: "PHP 3M - 5M", min: 3_000_000, max: 5_000_000 },
-  { value: "5m-10m", label: "PHP 5M - 10M", min: 5_000_000, max: 10_000_000 },
-  { value: "over-10m", label: "Over PHP 10M", min: 10_000_001 },
-] as const satisfies ReadonlyArray<{ value: string; label: string; min?: number; max?: number }>;
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -98,7 +75,6 @@ export default async function Home({ searchParams }: HomePageProps) {
       <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
         {adminCount === 0 && <SetupAdminDialog />}
 
-        {/* Welcome */}
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
             Welcome back, {u.name}
@@ -108,14 +84,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           </p>
         </div>
 
-        {/* Portfolio value */}
         <div className="rounded-xl border border-border p-5">
           <div className="flex items-center gap-2 text-muted-foreground">
             <TrendingUp size={14} />
             <p className="text-xs">{isAdmin ? "Total market value" : "Portfolio value"}</p>
           </div>
           <p className="mt-2 text-3xl font-semibold tabular-nums">
-            {formatPriceFull(portfolioValue)}
+            {formatPrice(portfolioValue)}
           </p>
           {ownListings.length > 0 && (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -124,7 +99,6 @@ export default async function Home({ searchParams }: HomePageProps) {
           )}
         </div>
 
-        {/* Stat grid */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard icon={<LayoutList size={14} />} label="Total listings" value={ownListings.length} />
           <StatCard icon={<FileText size={14} />} label="Published" value={published} accent />
@@ -132,7 +106,6 @@ export default async function Home({ searchParams }: HomePageProps) {
           <StatCard icon={<Eye size={14} />} label="Reach" value={totalReach} sublabel="unique viewers" />
         </div>
 
-        {/* Activity charts */}
         <DashboardCharts />
       </div>
     );
@@ -188,7 +161,7 @@ export default async function Home({ searchParams }: HomePageProps) {
       .leftJoin(user, eq(listing.userId, user.id))
       .where(and(...filters))
       .orderBy(desc(listing.createdAt))
-      .limit(24),
+      .limit(48),
     db
       .select({ propertyType: listing.propertyType })
       .from(listing)
@@ -206,7 +179,6 @@ export default async function Home({ searchParams }: HomePageProps) {
         listingTitle: listing.title,
         amount: offer.amount,
         status: offer.status,
-        createdAt: offer.createdAt,
         updatedAt: offer.updatedAt,
       })
       .from(offer)
@@ -225,10 +197,10 @@ export default async function Home({ searchParams }: HomePageProps) {
       .orderBy(desc(listingPhoto.cover), desc(listingPhoto.createdAt))
     : [];
 
-  const firstPhotoByListingId = new Map<string, string>();
+  const coverByListing = new Map<string, string>();
   for (const photo of listingPhotos) {
-    if (!firstPhotoByListingId.has(photo.listingId)) {
-      firstPhotoByListingId.set(photo.listingId, photo.url);
+    if (!coverByListing.has(photo.listingId)) {
+      coverByListing.set(photo.listingId, photo.url);
     }
   }
 
@@ -241,21 +213,11 @@ export default async function Home({ searchParams }: HomePageProps) {
       ...propertyTypesFromListings.map((r) => r.propertyType),
     ]),
   );
-  const hasActiveFilters = query.length > 0 || propertyTypeFilter !== "all" || priceRangeFilter !== "all";
-
-  const OFFER_STATUS_LABEL: Record<string, { label: string; color: string }> = {
-    pending:   { label: "Pending",   color: "text-amber-600 dark:text-amber-400" },
-    accepted:  { label: "Accepted",  color: "text-green-600 dark:text-green-400" },
-    rejected:  { label: "Rejected",  color: "text-destructive" },
-    countered: { label: "Countered", color: "text-blue-600 dark:text-blue-400" },
-    withdrawn: { label: "Withdrawn", color: "text-muted-foreground" },
-  };
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8">
       {adminCount === 0 && <SetupAdminDialog />}
 
-      {/* Header + compact stats */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Browse listings</h1>
@@ -271,132 +233,45 @@ export default async function Home({ searchParams }: HomePageProps) {
         </div>
       </div>
 
-      <form>
-        <div className="flex h-10 w-full overflow-hidden rounded-lg border border-input shadow-xs bg-background focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 transition-[color,box-shadow] dark:bg-input/30">
-          <label className="relative flex min-w-0 flex-1 items-center">
-            <Search className="pointer-events-none absolute left-3 size-4 shrink-0 text-muted-foreground" />
-            <input
-              name="q"
-              defaultValue={query}
-              placeholder="Search listings…"
-              className="h-full w-full border-0 bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </label>
+      <ListingFilterBar
+        query={query}
+        propertyTypeFilter={propertyTypeFilter}
+        priceRangeFilter={priceRangeFilter}
+        propertyTypeOptions={allPropertyTypeOptions}
+        clearHref="/"
+      />
 
-          <div className="w-px self-stretch bg-input" />
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">
+          {listings.length} result{listings.length !== 1 ? "s" : ""}
+          {(query.length > 0 || propertyTypeFilter !== "all" || priceRangeFilter !== "all") && " matching filters"}
+        </h2>
 
-          <select
-            name="propertyType"
-            defaultValue={propertyTypeFilter}
-            className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
-          >
-            <option value="all">All types</option>
-            {allPropertyTypeOptions.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-
-          <div className="w-px self-stretch bg-input" />
-
-          <select
-            name="priceRange"
-            defaultValue={priceRangeFilter}
-            className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
-          >
-            {PRICE_RANGES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-
-          <div className="w-px self-stretch bg-input" />
-
-          <button
-            type="submit"
-            className="h-full rounded-r-[calc(0.5rem-1px)] bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none"
-          >
-            Search
-          </button>
-        </div>
-
-        {hasActiveFilters && (
-          <div className="mt-2 flex items-center gap-1.5">
+        {listings.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+            <p className="text-sm text-muted-foreground">No listings match your filters.</p>
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               Clear filters
             </Link>
           </div>
-        )}
-      </form>
-
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-          {listings.length} published listing{listings.length === 1 ? "" : "s"}
-        </h2>
-
-        {listings.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No listings match your current filters.</p>
-          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {listings.map((item) => (
-              <article key={item.id} className="group rounded-xl border border-border bg-card transition-shadow hover:shadow-md">
-                <Link href={`/listings/${item.id}`} className="block p-4">
-                  <div className="mb-3 overflow-hidden rounded-lg border border-border/70 bg-muted/40">
-                    {firstPhotoByListingId.get(item.id) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={firstPhotoByListingId.get(item.id)}
-                        alt={`${item.title} property image`}
-                        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-40 w-full items-center justify-center text-xs text-muted-foreground">
-                        No property image
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{item.title}</p>
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin size={10} />
-                        {item.city}, {item.province}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                      {item.propertyType}
-                    </span>
-                  </div>
-
-                  <p className="mt-3 text-sm font-semibold">{formatPrice(item.askingPrice)}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{item.lotArea} sqm</p>
-                </Link>
-
-                {item.sellerUsername && (
-                  <div className="border-t border-border/60 px-4 py-2">
-                    <Link
-                      href={`/u/${item.sellerUsername}`}
-                      className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      Seller: {item.sellerName ?? item.sellerUsername}
-                    </Link>
-                  </div>
-                )}
-              </article>
+              <ListingCard
+                key={item.id}
+                item={{ ...item, coverUrl: coverByListing.get(item.id) }}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Recent offer activity */}
       {recentOffers.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground">Recent offer activity</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted-foreground">My offer activity</h2>
           <div className="rounded-xl border border-border divide-y divide-border">
             {recentOffers.map((o) => {
               const s = OFFER_STATUS_LABEL[o.status] ?? { label: o.status, color: "text-muted-foreground" };
@@ -404,7 +279,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 <div key={o.id} className="flex items-center justify-between gap-4 px-4 py-3">
                   <div className="min-w-0">
                     <Link
-                      href={`/listings/${o.listingId}`}
+                      href={`/listings/${o.listingId}/my-offer`}
                       className="truncate text-sm font-medium hover:underline"
                     >
                       {o.listingTitle ?? "Listing"}

@@ -1,10 +1,12 @@
 import { type Metadata } from "next";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { db } from "@/db";
 import { adminInvite, user } from "@/db/schema/auth";
 import { getServerSession } from "@/lib/auth/get-session";
+import { sendEmail } from "@/lib/email";
 import { ShieldCheck, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +36,20 @@ export default async function InvitePage({ params }: Props) {
         .set({ usedAt: new Date(), usedBy: session.user.id })
         .where(eq(adminInvite.token, token));
     });
+
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+    after(() =>
+      sendEmail({
+        to: session.user.email,
+        subject: "You're now an admin on Landil",
+        html: `
+          <p>Hi ${session.user.name ?? session.user.email},</p>
+          <p>Your invite was claimed successfully. You now have admin access to Landil.</p>
+          <p><a href="${base}/admin">Go to admin panel →</a></p>
+        `,
+      })
+    );
+
     redirect("/admin");
   }
 

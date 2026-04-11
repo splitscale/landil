@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { signOut } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
-import { Bell, LayoutList, LogOut, Settings } from "lucide-react";
+import { Bell, LogOut, Settings, User } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import SettingsDialog from "./settings-dialog";
+import { initials } from "@/lib/utils/initials";
 
 type NavUser = {
   name: string;
@@ -29,17 +29,8 @@ type NavUser = {
   createdAt?: Date | string | null;
 } | null;
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
 
 export default function Navbar({ user, unreadCount = 0 }: { user: NavUser; unreadCount?: number }) {
-  const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -61,20 +52,6 @@ export default function Navbar({ user, unreadCount = 0 }: { user: NavUser; unrea
           {/* Right side */}
           {user ? (
             <div className="flex items-center gap-1">
-              {(user.role === "seller" || user.role === "admin") && (
-                <Link
-                  href="/listings/new"
-                  className={cn(
-                    buttonVariants({ variant: "default", size: "sm" }),
-                    "gap-1.5 mr-1",
-                    pathname === "/listings/new" && "opacity-60 pointer-events-none",
-                  )}
-                >
-                  <LayoutList size={13} />
-                  New listing
-                </Link>
-              )}
-
               <Link
                 href="/notifications"
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
@@ -115,6 +92,14 @@ export default function Navbar({ user, unreadCount = 0 }: { user: NavUser; unrea
                   <DropdownMenuSeparator />
 
                   <DropdownMenuGroup>
+                    {user.username && (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/u/${user.username}`}>
+                          <User size={14} />
+                          My profile
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
                       <Settings size={14} />
                       Settings
