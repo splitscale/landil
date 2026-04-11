@@ -7,6 +7,11 @@
       "sourceType": "github",
       "computedHash": "a2e2ac1293ff433235f6d1be10b92e073232c82e25c85a95412153fac9ae3e95"
     },
+    "Your Skill Name": {
+      "source": "agentskillexchange/skills",
+      "sourceType": "github",
+      "computedHash": "df0e56c9ee7c56d7dc2b4b27ccb0b68b7090d1903f399ec3854d88e3fec81861"
+    },
     "better-auth-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",

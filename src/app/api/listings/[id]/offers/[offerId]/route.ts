@@ -60,6 +60,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   await db.update(offer).set(update).where(eq(offer.id, offerId));
 
+  // When accepted: mark listing as sold
+  if (status === "accepted") {
+    await db.update(listing).set({ status: "sold" }).where(eq(listing.id, id));
+  }
+
   // Notify other party
   const notifyUserId = status === "withdrawn" ? o.sellerId! : o.buyerId;
   const notifyTitle =

@@ -4,7 +4,7 @@
  * we silently continue — the account is already there.
  */
 
-import { ADMIN_USERNAME, ADMIN_PASSWORD, BUYER_USERNAME, BUYER_PASSWORD } from "./auth";
+import { ADMIN_USERNAME, ADMIN_PASSWORD, SELLER_USERNAME, SELLER_PASSWORD, BUYER_USERNAME, BUYER_PASSWORD } from "./auth";
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
@@ -39,9 +39,8 @@ async function ensureAccount({
 
 /**
  * Seed all test accounts. Call this from globalSetup or a beforeAll fixture.
- * Order matters: admin must exist so it can be promoted, but Better Auth doesn't
- * auto-assign the admin role — that's done via the setup wizard in the app.
- * For E2E we rely on the role already being set in the shared dev DB.
+ * Admin/seller roles must be set in the DB separately (via admin panel).
+ * The seed only guarantees accounts exist.
  */
 export async function seedTestAccounts() {
   await Promise.all([
@@ -50,6 +49,13 @@ export async function seedTestAccounts() {
       username: ADMIN_USERNAME,
       email: `${ADMIN_USERNAME}@test.landil.dev`,
       password: ADMIN_PASSWORD,
+      gender: true,
+    }),
+    ensureAccount({
+      name: "Test Seller",
+      username: SELLER_USERNAME,
+      email: `${SELLER_USERNAME}@test.landil.dev`,
+      password: SELLER_PASSWORD,
       gender: true,
     }),
     ensureAccount({

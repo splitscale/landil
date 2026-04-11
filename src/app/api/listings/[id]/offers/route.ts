@@ -10,6 +10,7 @@ import { createNotification } from "@/lib/notifications";
 const BodySchema = z.object({
   amount: z.number().int().positive(),
   note: z.string().max(1000).optional(),
+  sqm: z.number().positive().optional(),
 });
 
 export async function POST(
@@ -27,7 +28,7 @@ export async function POST(
     .from(listing)
     .where(eq(listing.id, id));
 
-  if (!l || l.status !== "published") {
+  if (!l || (l.status !== "published" && l.status !== "sold")) {
     return NextResponse.json({ error: "Listing not found" }, { status: 404 });
   }
   if (l.userId === u.id) {
@@ -56,6 +57,7 @@ export async function POST(
     buyerId: u.id,
     amount: parsed.data.amount,
     note: parsed.data.note ?? null,
+    sqm: parsed.data.sqm ?? null,
   };
 
   await db.insert(offer).values(newOffer);

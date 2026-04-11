@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatTime } from "@/lib/format";
+import { ChevronDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,7 +30,7 @@ type Props = {
   messages: Message[];
   isBuyer: boolean;
   canWithdraw?: boolean;
-  canAct?: boolean; // seller: can accept/reject/counter
+  canAct?: boolean;
 };
 
 export default function OfferThreadClient({
@@ -48,24 +49,57 @@ export default function OfferThreadClient({
   const [counterAmt, setCounterAmt] = useState("");
   const [acting, setActing] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawConfirm, setWithdrawConfirm] = useState("");
+  const [dangerOpen, setDangerOpen] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // SSE: real-time messages
+  useEffect(() => {
+    const es = new EventSource(`/api/listings/${listingId}/offers/${offerId}/stream`);
+
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data) as { id: string; content: string; senderId: string; createdAt: string };
+        // Ignore messages sent by self (already optimistically added)
+        if (msg.senderId === currentUserId) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, { ...msg, senderName: "Them" }];
+        });
+      } catch { /* malformed */ }
+    };
+
+    es.onerror = () => {
+      // SSE disconnected — silently degrade; page refresh will sync
+      es.close();
+    };
+
+    return () => es.close();
+  }, [offerId, listingId, currentUserId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     setSending(true);
+    const content = text.trim();
+    setText("");
     try {
       const res = await fetch(`/api/listings/${listingId}/offers/${offerId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text.trim() }),
+        body: JSON.stringify({ content }),
       });
-      if (!res.ok) { toast.error("Failed to send."); return; }
+      if (!res.ok) { toast.error("Failed to send."); setText(content); return; }
       const { id } = await res.json();
       setMessages((prev) => [
         ...prev,
-        { id, content: text.trim(), senderId: currentUserId, senderName: "You", createdAt: new Date().toISOString() },
+        { id, content, senderId: currentUserId, senderName: "You", createdAt: new Date().toISOString() },
       ]);
-      setText("");
     } finally {
       setSending(false);
     }
@@ -90,6 +124,10 @@ export default function OfferThreadClient({
   };
 
   const confirmWithdraw = async () => {
+    if (withdrawConfirm.toLowerCase() !== "withdraw") {
+      toast.error('Type "withdraw" to confirm.');
+      return;
+    }
     setActing(true);
     try {
       const res = await fetch(`/api/listings/${listingId}/offers/${offerId}`, {
@@ -130,6 +168,7 @@ export default function OfferThreadClient({
                 </div>
               );
             })}
+            <div ref={bottomRef} />
           </div>
         )}
       </div>
@@ -152,49 +191,6 @@ export default function OfferThreadClient({
           Send
         </button>
       </form>
-
-      {/* Buyer: withdraw with confirmation */}
-      {isBuyer && canWithdraw && (
-        <>
-          <div className="border-t border-border pt-4">
-            <button
-              onClick={() => setWithdrawOpen(true)}
-              disabled={acting}
-              className="w-full rounded-lg border border-destructive/30 px-4 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
-            >
-              Withdraw offer
-            </button>
-          </div>
-
-          <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Withdraw your offer?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your offer will be cancelled and the seller will be notified. You can
-                  submit a new offer on this listing at any time.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel
-                  onClick={() => setWithdrawOpen(false)}
-                  disabled={acting}
-                  className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
-                >
-                  Keep offer
-                </AlertDialogCancel>
-                <button
-                  onClick={confirmWithdraw}
-                  disabled={acting}
-                  className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors"
-                >
-                  {acting ? "Withdrawing…" : "Yes, withdraw"}
-                </button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </>
-      )}
 
       {/* Seller: accept / reject / counter */}
       {!isBuyer && canAct && (
@@ -239,6 +235,79 @@ export default function OfferThreadClient({
               Counter
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Buyer: danger zone (collapsed by default to prevent accidental withdrawal) */}
+      {isBuyer && canWithdraw && (
+        <div className="border-t border-border pt-4">
+          <button
+            onClick={() => setDangerOpen((v) => !v)}
+            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>Danger zone</span>
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${dangerOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {dangerOpen && (
+            <div className="mt-3">
+              <p className="mb-2 text-xs text-muted-foreground">
+                Withdrawing your offer is permanent. The seller will be notified.
+              </p>
+              <button
+                onClick={() => { setWithdrawConfirm(""); setWithdrawOpen(true); }}
+                disabled={acting}
+                className="w-full rounded-lg border border-destructive/30 px-4 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+              >
+                Withdraw offer…
+              </button>
+            </div>
+          )}
+
+          <AlertDialog open={withdrawOpen} onOpenChange={(v) => { setWithdrawOpen(v); if (!v) setWithdrawConfirm(""); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Withdraw your offer?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This cannot be undone. The seller will be notified. Type{" "}
+                  <span className="font-semibold text-foreground">withdraw</span> to confirm.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="mt-2">
+                <label htmlFor="withdraw-confirm" className="sr-only">Type withdraw to confirm</label>
+                <input
+                  id="withdraw-confirm"
+                  type="text"
+                  value={withdrawConfirm}
+                  onChange={(e) => setWithdrawConfirm(e.target.value)}
+                  placeholder='Type "withdraw"'
+                  autoComplete="off"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+                />
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => { setWithdrawOpen(false); setWithdrawConfirm(""); }}
+                  disabled={acting}
+                  className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  Keep offer
+                </AlertDialogCancel>
+                <button
+                  onClick={confirmWithdraw}
+                  disabled={acting || withdrawConfirm.toLowerCase() !== "withdraw"}
+                  className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors"
+                >
+                  {acting ? "Withdrawing…" : "Confirm withdrawal"}
+                </button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>

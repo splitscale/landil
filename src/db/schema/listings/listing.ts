@@ -7,7 +7,7 @@ export const listing = listingsSchema.table("listing", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
 
-  status: text("status", { enum: ["draft", "published"] }).notNull().default("draft"),
+  status: text("status", { enum: ["draft", "published", "sold"] }).notNull().default("draft"),
 
   // Core details
   propertyType: text("property_type").notNull(),

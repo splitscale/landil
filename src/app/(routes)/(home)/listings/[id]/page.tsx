@@ -122,7 +122,9 @@ export default async function ListingDetailPage({ params }: Props) {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-              l.status === "published" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              l.status === "published" ? "bg-primary/10 text-primary" :
+              l.status === "sold" ? "bg-green-500/10 text-green-600 dark:text-green-400" :
+              "bg-muted text-muted-foreground"
             }`}>
               {l.status}
             </span>
@@ -370,7 +372,7 @@ export default async function ListingDetailPage({ params }: Props) {
             </Link>
           </div>
         ) : (
-          <MakeOfferDialog listingId={id} askingPrice={l.askingPrice} />
+          <MakeOfferDialog listingId={id} askingPrice={l.askingPrice} lotArea={l.lotArea} />
         )}
       </div>
 

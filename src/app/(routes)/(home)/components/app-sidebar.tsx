@@ -20,6 +20,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -63,12 +64,17 @@ const NAV_ADMIN = [
   { title: "Admin", href: "/admin", icon: IconShieldHalf },
 ];
 
-const NAV_SECONDARY = [
-  { title: "Settings", icon: IconSettings },
-];
-
-function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: () => void }) {
+function NavUser({
+  user,
+  unreadCount,
+  onSettingsOpen,
+}: {
+  user: SidebarUser;
+  unreadCount: number;
+  onSettingsOpen: () => void;
+}) {
   const { isMobile } = useSidebar();
+  const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -79,6 +85,22 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
 
   return (
     <SidebarMenu>
+      {/* Notifications — grouped with footer */}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Notifications" isActive={pathname === "/notifications"}>
+          <Link href="/notifications" className="relative">
+            <IconBell />
+            <span>Notifications</span>
+            {unreadCount > 0 && (
+              <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
+      {/* Account menu */}
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -108,6 +130,8 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
               <IconSettings className="size-4" />
               Settings
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
 
             <DropdownMenuItem
               onSelect={handleSignOut}
@@ -176,19 +200,6 @@ export default function AppSidebar({ user, unreadCount = 0 }: AppSidebarProps) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Notifications" isActive={pathname === "/notifications"}>
-                    <Link href="/notifications" className="relative">
-                      <IconBell />
-                      <span>Notifications</span>
-                      {unreadCount > 0 && (
-                        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -219,7 +230,11 @@ export default function AppSidebar({ user, unreadCount = 0 }: AppSidebarProps) {
         </SidebarContent>
 
         <SidebarFooter className="overflow-x-hidden">
-          <NavUser user={user} onSettingsOpen={() => setSettingsOpen(true)} />
+          <NavUser
+            user={user}
+            unreadCount={unreadCount}
+            onSettingsOpen={() => setSettingsOpen(true)}
+          />
         </SidebarFooter>
       </Sidebar>
 

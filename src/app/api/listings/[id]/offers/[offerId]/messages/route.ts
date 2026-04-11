@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
 import { offer, offerMessage } from "@/db/schema/marketplace";
 import { createNotification } from "@/lib/notifications";
+import { getPublisher, offerChannel } from "@/lib/redis";
 
 const BodySchema = z.object({ content: z.string().min(1).max(2000) });
 
@@ -48,6 +49,17 @@ export async function POST(req: NextRequest, { params }: Params) {
   };
 
   await db.insert(offerMessage).values(msg);
+
+  // Publish to Redis for real-time SSE subscribers
+  try {
+    const pub = getPublisher();
+    await pub.publish(
+      offerChannel(offerId),
+      JSON.stringify({ id: msg.id, content: parsed.data.content, senderId: u.id, createdAt: new Date().toISOString() }),
+    );
+  } catch {
+    // Redis unavailable — SSE won't get real-time update, page refresh will
+  }
 
   // Notify other party
   const recipientId = u.id === o.buyerId ? o.sellerId : o.buyerId;

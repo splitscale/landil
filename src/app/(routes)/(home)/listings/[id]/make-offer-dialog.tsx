@@ -7,14 +7,17 @@ import { toast } from "sonner";
 export default function MakeOfferDialog({
   listingId,
   askingPrice,
+  lotArea,
 }: {
   listingId: string;
   askingPrice: number;
+  lotArea: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(askingPrice.toLocaleString("en-PH"));
   const [note, setNote] = useState("");
+  const [sqm, setSqm] = useState("");
   const [loading, setLoading] = useState(false);
 
   const formatted = askingPrice.toLocaleString("en-PH");
@@ -26,12 +29,17 @@ export default function MakeOfferDialog({
       toast.error("Enter a valid offer amount.");
       return;
     }
+    const parsedSqm = sqm ? parseFloat(sqm) : undefined;
+    if (parsedSqm !== undefined && (isNaN(parsedSqm) || parsedSqm <= 0)) {
+      toast.error("Enter a valid square meter amount.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/listings/${listingId}/offers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parsed, note: note.trim() || undefined }),
+        body: JSON.stringify({ amount: parsed, note: note.trim() || undefined, sqm: parsedSqm }),
       });
       if (!res.ok) {
         const { error } = await res.json().catch(() => ({ error: "Failed" }));
@@ -61,7 +69,7 @@ export default function MakeOfferDialog({
     <div className="rounded-xl border border-border p-5 space-y-4">
       <div>
         <h2 className="text-base font-semibold">Make an offer</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Asking price: ₱{formatted}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Asking price: ₱{formatted} · {lotArea} sqm total</p>
       </div>
 
       <form onSubmit={submit} className="space-y-3">
@@ -75,6 +83,26 @@ export default function MakeOfferDialog({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
+            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+          />
+          {parseInt(amount.replace(/,/g, ""), 10) < askingPrice && amount && (
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              Your offer is below the asking price.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="offer-sqm" className="mb-1 block text-xs font-medium">
+            Area (sqm) <span className="text-muted-foreground font-normal">— leave blank to offer for the full lot</span>
+          </label>
+          <input
+            id="offer-sqm"
+            type="text"
+            inputMode="decimal"
+            placeholder={lotArea}
+            value={sqm}
+            onChange={(e) => setSqm(e.target.value)}
             className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
