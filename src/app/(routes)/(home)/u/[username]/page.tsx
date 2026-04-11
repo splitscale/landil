@@ -38,6 +38,9 @@ export default async function ProfilePage({ params }: Props) {
 
   if (!profile) notFound();
 
+  // Buyer profiles are private — only sellers and admins have public profiles
+  if (profile.role === "buyer") notFound();
+
   const listings = await db
     .select()
     .from(listing)

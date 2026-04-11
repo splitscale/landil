@@ -14,7 +14,7 @@ import ListingCard from "./components/listing-card";
 import ListingFilterBar from "./components/listing-filter-bar";
 import { propertyTypes as listingPropertyTypes } from "@/app/(routes)/(home)/listings/new/validate";
 import { formatPrice, formatPriceShort } from "@/lib/format";
-import { PRICE_RANGES, OFFER_STATUS_LABEL } from "@/lib/listings-browse";
+import { PRICE_RANGES } from "@/lib/listings-browse";
 import { LayoutList, MessageSquare, TrendingUp, FileText, Eye } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -144,7 +144,7 @@ export default async function Home({ searchParams }: HomePageProps) {
     }
   }
 
-  const [listings, propertyTypesFromListings, [availablePropertiesRow], recentOffers] = await Promise.all([
+  const [listings, propertyTypesFromListings, [availablePropertiesRow]] = await Promise.all([
     db
       .select({
         id: listing.id,
@@ -172,20 +172,6 @@ export default async function Home({ searchParams }: HomePageProps) {
       .select({ value: count() })
       .from(listing)
       .where(eq(listing.status, "published")),
-    db
-      .select({
-        id: offer.id,
-        listingId: offer.listingId,
-        listingTitle: listing.title,
-        amount: offer.amount,
-        status: offer.status,
-        updatedAt: offer.updatedAt,
-      })
-      .from(offer)
-      .leftJoin(listing, eq(offer.listingId, listing.id))
-      .where(eq(offer.buyerId, u.id))
-      .orderBy(desc(offer.updatedAt))
-      .limit(10),
   ]);
 
   const listingIds = listings.map((l) => l.id);
@@ -205,8 +191,6 @@ export default async function Home({ searchParams }: HomePageProps) {
   }
 
   const availablePropertiesCount = availablePropertiesRow?.value ?? 0;
-  const activeOffersCount = recentOffers.filter((o) => o.status === "pending" || o.status === "countered").length;
-  const trackedListingsCount = new Set(recentOffers.map((o) => o.listingId)).size;
   const allPropertyTypeOptions = Array.from(
     new Set([
       ...listingPropertyTypes,
@@ -218,19 +202,9 @@ export default async function Home({ searchParams }: HomePageProps) {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8">
       {adminCount === 0 && <SetupAdminDialog />}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Browse listings</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{availablePropertiesCount} properties available</p>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">{activeOffersCount}</span> active offer{activeOffersCount !== 1 ? "s" : ""}
-          </span>
-          <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">{trackedListingsCount}</span> tracked
-          </span>
-        </div>
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight">Browse listings</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{availablePropertiesCount} properties available</p>
       </div>
 
       <ListingFilterBar
@@ -268,36 +242,6 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
         )}
       </div>
-
-      {recentOffers.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground">My offer activity</h2>
-          <div className="rounded-xl border border-border divide-y divide-border">
-            {recentOffers.map((o) => {
-              const s = OFFER_STATUS_LABEL[o.status] ?? { label: o.status, color: "text-muted-foreground" };
-              return (
-                <div key={o.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/listings/${o.listingId}/my-offer`}
-                      className="truncate text-sm font-medium hover:underline"
-                    >
-                      {o.listingTitle ?? "Listing"}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {new Date(o.updatedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold">{formatPrice(o.amount)}</p>
-                    <p className={`text-xs font-medium ${s.color}`}>{s.label}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
