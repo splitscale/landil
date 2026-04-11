@@ -1,8 +1,6 @@
 import { type Metadata } from "next";
 import { getServerSession } from "@/lib/auth/get-session";
 import { redirect } from "next/navigation";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { and, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 import { db } from "@/db";
@@ -273,52 +271,58 @@ export default async function Home({ searchParams }: HomePageProps) {
         </div>
       </div>
 
-      <form className="rounded-xl border border-border/60 bg-background/60 p-3 sm:p-4">
-        <div className="grid gap-3 lg:grid-cols-[1.4fr,1fr,1fr,auto]">
-          <label className="relative lg:col-span-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <form>
+        <div className="flex h-10 w-full overflow-hidden rounded-lg border border-input shadow-xs bg-background focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 transition-[color,box-shadow] dark:bg-input/30">
+          <label className="relative flex min-w-0 flex-1 items-center">
+            <Search className="pointer-events-none absolute left-3 size-4 shrink-0 text-muted-foreground" />
             <input
               name="q"
               defaultValue={query}
-              placeholder="Search by title, city, province, or type"
-              className="h-9 w-full rounded-lg border border-input/70 bg-background pl-9 pr-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              placeholder="Search listings…"
+              className="h-full w-full border-0 bg-transparent pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground"
             />
           </label>
+
+          <div className="w-px self-stretch bg-input" />
 
           <select
             name="propertyType"
             defaultValue={propertyTypeFilter}
-            className="h-9 w-full rounded-lg border border-input/70 bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
           >
-            <option value="all">All property types</option>
+            <option value="all">All types</option>
             {allPropertyTypeOptions.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
 
+          <div className="w-px self-stretch bg-input" />
+
           <select
             name="priceRange"
             defaultValue={priceRangeFilter}
-            className="h-9 w-full rounded-lg border border-input/70 bg-background px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
           >
             {PRICE_RANGES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
 
+          <div className="w-px self-stretch bg-input" />
+
           <button
             type="submit"
-            className={cn(buttonVariants({ variant: "secondary" }), "h-9 w-full rounded-lg px-4 md:w-auto")}
+            className="h-full rounded-r-[calc(0.5rem-1px)] bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none"
           >
-            Apply filters
+            Search
           </button>
         </div>
 
         {hasActiveFilters && (
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-1.5">
             <Link
               href="/"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-7 px-1 text-muted-foreground")}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Clear filters
             </Link>

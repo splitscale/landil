@@ -1,11 +1,11 @@
 # Landil – Build Checklist
 
 ## Buyer side
-- [ ] Listing detail page (photos, specs, title info, docs)
+- [x] Listing detail page (photos, specs, title info, docs)
 - [ ] Title / LRA check display
 - [ ] BIR zonal value lookup + tax simulator
 - [ ] Comparable listings (comps) view
-- [ ] Make offer flow
+- [x] Make offer flow
 
 ## Seller side
 - [x] Listings dashboard (all listings, status)
@@ -61,10 +61,10 @@
 - [x] Revoke invites from dialog UI
 
 ## Shared
-- [ ] Listing search / browse page (public-facing)
+- [x] Listing search / browse page (public-facing)
 - [ ] Verified registry badge (manual or automated verification)
-- [ ] Offer negotiation thread (buyer ↔ seller messaging)
-- [ ] Notifications (new offer, offer status change)
+- [x] Offer negotiation thread (buyer ↔ seller messaging)
+- [x] Notifications (new offer, offer status change, new message)
 - [ ] Email on invite generation / claim
 
 ## Done (infrastructure)

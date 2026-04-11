@@ -13,6 +13,7 @@ import {
   IconSettings,
   IconBuildingStore,
   IconShieldHalf,
+  IconBell,
 } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -44,6 +45,11 @@ type SidebarUser = {
   username?: string | null;
   role?: string | null;
   createdAt?: Date | string | null;
+};
+
+type AppSidebarProps = {
+  user: SidebarUser;
+  unreadCount?: number;
 };
 
 function initials(name: string) {
@@ -121,7 +127,7 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
   );
 }
 
-export default function AppSidebar({ user }: { user: SidebarUser }) {
+export default function AppSidebar({ user, unreadCount = 0 }: AppSidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -173,6 +179,19 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Notifications" isActive={pathname === "/notifications"}>
+                    <Link href="/notifications" className="relative">
+                      <IconBell />
+                      <span>Notifications</span>
+                      {unreadCount > 0 && (
+                        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

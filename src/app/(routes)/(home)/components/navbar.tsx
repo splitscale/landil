@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { signOut } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
-import { LayoutList, LogOut, Settings } from "lucide-react";
+import { Bell, LayoutList, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,7 +38,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export default function Navbar({ user }: { user: NavUser }) {
+export default function Navbar({ user, unreadCount = 0 }: { user: NavUser; unreadCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -60,13 +60,13 @@ export default function Navbar({ user }: { user: NavUser }) {
 
           {/* Right side */}
           {user ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {(user.role === "seller" || user.role === "admin") && (
                 <Link
                   href="/listings/new"
                   className={cn(
                     buttonVariants({ variant: "default", size: "sm" }),
-                    "gap-1.5",
+                    "gap-1.5 mr-1",
                     pathname === "/listings/new" && "opacity-60 pointer-events-none",
                   )}
                 >
@@ -74,6 +74,19 @@ export default function Navbar({ user }: { user: NavUser }) {
                   New listing
                 </Link>
               )}
+
+              <Link
+                href="/notifications"
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell size={16} />
+                {unreadCount > 0 && (
+                  <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

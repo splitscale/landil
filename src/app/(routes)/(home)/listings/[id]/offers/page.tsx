@@ -1,6 +1,7 @@
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import Link from "next/link";
 import { db } from "@/db";
 import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
@@ -81,7 +82,7 @@ export default async function OffersPage({ params }: Props) {
       ) : (
         <div className="space-y-3">
           {offers.map((o) => (
-            <div key={o.id} className="rounded-xl border border-border p-4">
+            <Link key={o.id} href={`/listings/${id}/offers/${o.id}`} className="block rounded-xl border border-border p-4 hover:bg-muted/30 transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-lg font-semibold">{formatPrice(o.amount)}</p>
@@ -90,9 +91,7 @@ export default async function OffersPage({ params }: Props) {
                     {o.buyerUsername && <span className="ml-1 text-xs">@{o.buyerUsername}</span>}
                   </p>
                   {o.buyerEmail && (
-                    <a href={`mailto:${o.buyerEmail}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      {o.buyerEmail}
-                    </a>
+                    <span className="text-xs text-muted-foreground">{o.buyerEmail}</span>
                   )}
                 </div>
                 <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[o.status] ?? "bg-muted text-muted-foreground"}`}>
@@ -105,7 +104,7 @@ export default async function OffersPage({ params }: Props) {
                 </p>
               )}
               <p className="mt-3 text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
-            </div>
+            </Link>
           ))}
         </div>
       )}
