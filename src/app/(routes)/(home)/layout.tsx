@@ -37,7 +37,7 @@ export default async function HomeLayout({
   }
 
   const isImpersonating = !!(session as { session?: { impersonatedBy?: string } } | null)?.session?.impersonatedBy;
-  const role = (user as { role?: string | null }).role ?? "user";
+  const role = (user as { role?: string | null }).role ?? "buyer";
   const isBuyer = role !== "seller" && role !== "admin";
 
   const unreadNotifications = await db

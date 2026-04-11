@@ -36,7 +36,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   if (!me) redirect("/signin");
 
   const u = me.user as { id: string; name: string; role?: string | null; username?: string | null; email: string; image?: string | null };
-  const role = u.role ?? "user";
+  const role = u.role ?? "buyer";
   const isAdmin = role === "admin";
   const isSeller = role === "seller";
 

@@ -28,12 +28,24 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "buyer",
         required: false,
-        input: false,
+        input: false, // set by admin only
       },
       gender: {
         type: "boolean",
         required: true,
         input: true,
+      },
+      plan: {
+        type: "string",
+        defaultValue: "free",
+        required: false,
+        input: false, // set by admin or payment webhook
+      },
+      verified: {
+        type: "boolean",
+        defaultValue: false,
+        required: false,
+        input: false, // set by admin only
       },
     },
   },
