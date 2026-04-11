@@ -1,4 +1,4 @@
-import { pgSchema, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgSchema, text, integer, timestamp, real } from "drizzle-orm/pg-core";
 import { user } from "../auth/user";
 import { listing } from "../listings/listing";
 
@@ -19,6 +19,9 @@ export const offer = marketplaceSchema.table("offer", {
 
   // Optional note with the initial offer
   note: text("note"),
+
+  // For subdivided lot offers — square meters being purchased
+  sqm: real("sqm"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

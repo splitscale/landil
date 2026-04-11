@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, UserRoundCog } from "lucide-react";
+import Link from "next/link";
+import { UserRoundCog } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
+import { Switch } from "@/components/ui/switch";
 
 type Role = "admin" | "seller" | "buyer";
 
@@ -57,18 +59,6 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
     }
   };
 
-  const handleVerifiedToggle = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await patchUser(user.id, { verified: !verified });
-      setVerified((v) => !v);
-      router.refresh();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePlanChange = async (next: "free" | "pro") => {
     if (next === plan || loading) return;
     setLoading(true);
@@ -95,8 +85,14 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3">
-        <p className="font-medium">{user.name}</p>
-        {user.username && <p className="text-xs text-muted-foreground">@{user.username}</p>}
+        {user.username ? (
+          <Link href={`/u/${user.username}`} className="group">
+            <p className="font-medium group-hover:underline underline-offset-2">{user.name}</p>
+            <p className="text-xs text-muted-foreground">@{user.username}</p>
+          </Link>
+        ) : (
+          <p className="font-medium">{user.name}</p>
+        )}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
       <td className="px-4 py-3">
@@ -118,30 +114,37 @@ export default function UserRoleRow({ user, currentUserId }: { user: User; curre
         )}
       </td>
       <td className="px-4 py-3">
-        <button
-          onClick={handleVerifiedToggle}
+        <Switch
+          checked={verified}
           disabled={loading}
-          title={verified ? "Revoke verified" : "Mark verified"}
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-            verified
-              ? "bg-primary/10 text-primary hover:bg-destructive/10 hover:text-destructive"
-              : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
-          }`}
-        >
-          <BadgeCheck size={11} />
-          {verified ? "Verified" : "Unverified"}
-        </button>
+          onCheckedChange={async (next) => {
+            if (loading) return;
+            setLoading(true);
+            try {
+              await patchUser(user.id, { verified: next });
+              setVerified(next);
+              router.refresh();
+            } finally {
+              setLoading(false);
+            }
+          }}
+          aria-label={verified ? "Revoke verified status" : "Mark as verified"}
+        />
       </td>
       <td className="px-4 py-3">
-        <select
-          value={plan}
-          disabled={loading}
-          onChange={(e) => handlePlanChange(e.target.value as "free" | "pro")}
-          className="rounded-md border border-border bg-background px-2 py-1 text-xs capitalize disabled:opacity-50 cursor-pointer"
-        >
-          <option value="free">free</option>
-          <option value="pro">pro</option>
-        </select>
+        {role === "admin" ? (
+          <span className="text-xs text-muted-foreground italic">unrestricted</span>
+        ) : (
+          <select
+            value={plan}
+            disabled={loading}
+            onChange={(e) => handlePlanChange(e.target.value as "free" | "pro")}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs capitalize disabled:opacity-50 cursor-pointer"
+          >
+            <option value="free">free</option>
+            <option value="pro">pro</option>
+          </select>
+        )}
       </td>
       <td className="px-4 py-3">
         {!isSelf && (

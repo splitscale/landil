@@ -1,6 +1,17 @@
 {
   "version": 1,
   "skills": {
+    "Paddle": {
+      "source": "LJT-520/openClaw-backup",
+      "ref": "master",
+      "sourceType": "github",
+      "computedHash": "a2e2ac1293ff433235f6d1be10b92e073232c82e25c85a95412153fac9ae3e95"
+    },
+    "Your Skill Name": {
+      "source": "agentskillexchange/skills",
+      "sourceType": "github",
+      "computedHash": "df0e56c9ee7c56d7dc2b4b27ccb0b68b7090d1903f399ec3854d88e3fec81861"
+    },
     "better-auth-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",
@@ -11,6 +22,42 @@
       "sourceType": "github",
       "computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
     },
+    "drizzle-orm-drivers-and-runtimes": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "414c04a118c46b4a00c45d81e1a7762cc516f97b01893837bc229e04eac89cb7"
+    },
+    "drizzle-orm-ecosystem-and-extensions": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "1a561b7f9e670d339b8473f241075d7fba220b20870ab1e7dfcf7cefde6f549d"
+    },
+    "drizzle-orm-migrations-and-drizzle-kit": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "d92118e72a95e20dfb4dabfc7b559fdd63425d50842fdb7bb92d9a5745073a56"
+    },
+    "drizzle-orm-overview-and-setup": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "7579bc86e4746174f1943cf6b19bef7c4dbb1eab89abb9b7b20642a5b3edb282"
+    },
+    "drizzle-orm-queries-and-sql": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "f999f0fce23334033c18cd17b1607a5e07a84dd517a06ed5d0ced2cdd1e1e2bc"
+    },
+    "drizzle-orm-schema-and-relations": {
+      "source": "andrewsrigom/agent-skills",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "0cb7673c708d94b50dc1e3be1f8d2a884b4a8050b3accd5b1dc08900e68a6e21"
+    },
     "email-and-password-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",
@@ -20,6 +67,21 @@
       "source": "better-auth/skills",
       "sourceType": "github",
       "computedHash": "79a5a85b43d10e9fe37582b3506b051a33a991817b938f349099baa5ddba21aa"
+    },
+    "payment-integration": {
+      "source": "unclecatvn/agent-skills",
+      "sourceType": "github",
+      "computedHash": "4fef84bd15b15ac3a5182f85273d7ab4ea43edafee9fdb282916ff79dadca12d"
+    },
+    "tanstack-integration-best-practices": {
+      "source": "DeckardGer/tanstack-agent-skills",
+      "sourceType": "github",
+      "computedHash": "f8454d0835f04539c0d90a5a481937bc0e1cd7e31ac8610f302abd3421f3d24a"
+    },
+    "tanstack-query-best-practices": {
+      "source": "DeckardGer/tanstack-agent-skills",
+      "sourceType": "github",
+      "computedHash": "21d2e8b7468a81d772b6527ad8ca178cc2f3f08af777bb9061333013ee88a0c9"
     },
     "two-factor-authentication-best-practices": {
       "source": "better-auth/skills",

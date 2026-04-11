@@ -1,14 +1,15 @@
 import { type Metadata } from "next";
 import { notFound } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
-import { listing } from "@/db/schema/listings";
+import { listing, listingPhoto } from "@/db/schema/listings";
 import { getServerSession } from "@/lib/auth/get-session";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BadgeCheck, MapPin, Mail, CalendarDays, LayoutList } from "lucide-react";
+import { BadgeCheck, ShieldCheck, Sparkles, Mail, CalendarDays, LayoutList } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { initials } from "@/lib/utils/initials";
+import ListingCard from "@/app/(routes)/(home)/components/listing-card";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -22,17 +23,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
-
 function formatDate(date: Date | string | null) {
   if (!date) return "";
   return new Date(date).toLocaleDateString("en-PH", { year: "numeric", month: "long" });
-}
-
-function formatPrice(pesos: number) {
-  return `₱${pesos.toLocaleString("en-PH")}`;
 }
 
 export default async function ProfilePage({ params }: Props) {
@@ -45,10 +38,26 @@ export default async function ProfilePage({ params }: Props) {
 
   if (!profile) notFound();
 
+  // Buyer profiles are private — only sellers and admins have public profiles
+  if (profile.role === "buyer") notFound();
+
   const listings = await db
     .select()
     .from(listing)
     .where(and(eq(listing.userId, profile.id), eq(listing.status, "published")));
+
+  // Cover photos for listing cards
+  const listingIds = listings.map((l) => l.id);
+  const photos = listingIds.length
+    ? await db
+        .select({ listingId: listingPhoto.listingId, url: listingPhoto.url })
+        .from(listingPhoto)
+        .where(inArray(listingPhoto.listingId, listingIds))
+    : [];
+  const coverByListing = new Map<string, string>();
+  for (const p of photos) {
+    if (!coverByListing.has(p.listingId)) coverByListing.set(p.listingId, p.url);
+  }
 
   const session = await getServerSession();
   const isAuthenticated = !!session;
@@ -66,10 +75,22 @@ export default async function ProfilePage({ params }: Props) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold tracking-tight">{profile.name}</h1>
-            {profile.verified && (
-              <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
+            {profile.role === "admin" && (
+              <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                <ShieldCheck size={11} />
+                Admin
+              </span>
+            )}
+            {profile.verified && profile.role !== "admin" && (profile as { plan?: string | null }).plan === "pro" && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                 <BadgeCheck size={11} />
-                Verified seller
+                Verified
+              </span>
+            )}
+            {(profile as { plan?: string | null }).plan === "pro" && profile.role !== "admin" && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                <Sparkles size={11} />
+                Pro
               </span>
             )}
           </div>
@@ -108,26 +129,10 @@ export default async function ProfilePage({ params }: Props) {
         {listings.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((l) => (
-              <Link
+              <ListingCard
                 key={l.id}
-                href={`/listings/${l.id}`}
-                className="group rounded-xl border border-border p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{l.title}</p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin size={10} />
-                      {l.city}, {l.province}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {l.propertyType}
-                  </span>
-                </div>
-                <p className="mt-3 text-sm font-semibold">{formatPrice(l.askingPrice)}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{l.lotArea} sqm</p>
-              </Link>
+                item={{ ...l, coverUrl: coverByListing.get(l.id) }}
+              />
             ))}
           </div>
         )}

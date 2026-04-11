@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Enforce free tier cap
-  const [{ plan }] = await db.select({ plan: user.plan }).from(user).where(eq(user.id, session.user.id));
-  if (plan === "free") {
+  // Enforce free tier cap (admins are exempt)
+  const [{ plan, role }] = await db.select({ plan: user.plan, role: user.role }).from(user).where(eq(user.id, session.user.id));
+  if (plan === "free" && role !== "admin") {
     const [{ value: listingCount }] = await db
       .select({ value: count() })
       .from(listing)
@@ -57,6 +57,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { status, values, photos, docs } = parsed.data;
+
+  // Free sellers cannot use private docs
+  const isPro = plan === "pro" || role === "admin";
+  const sanitisedDocs = docs.map((d) => ({
+    ...d,
+    visibility: isPro ? d.visibility : "public" as const,
+  }));
 
   // Strip commas and parse price
   const askingPrice = parseInt(values.askingPrice.replace(/,/g, ""), 10);
@@ -98,9 +105,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (docs.length > 0) {
+    if (sanitisedDocs.length > 0) {
       await tx.insert(listingDoc).values(
-        docs.map((d) => ({
+        sanitisedDocs.map((d) => ({
           listingId,
           url: d.url,
           key: d.key,

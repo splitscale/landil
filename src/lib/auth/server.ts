@@ -22,18 +22,37 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      enabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    },
+  },
   user: {
     additionalFields: {
       role: {
         type: "string",
         defaultValue: "buyer",
         required: false,
-        input: false,
+        input: false, // set by admin only
       },
       gender: {
         type: "boolean",
         required: true,
         input: true,
+      },
+      plan: {
+        type: "string",
+        defaultValue: "free",
+        required: false,
+        input: false, // set by admin or payment webhook
+      },
+      verified: {
+        type: "boolean",
+        defaultValue: false,
+        required: false,
+        input: false, // set by admin only
       },
     },
   },

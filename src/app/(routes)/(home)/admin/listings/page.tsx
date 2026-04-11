@@ -4,7 +4,7 @@ import { listing } from "@/db/schema/listings";
 import { user } from "@/db/schema/auth/user";
 import { eq } from "drizzle-orm";
 import { requireRole } from "@/lib/auth/roles";
-import ListingStatusRow from "./listing-status-row";
+import ListingsTable from "./listings-table";
 
 export const metadata: Metadata = { title: "Listings · Admin" };
 
@@ -30,28 +30,7 @@ export default async function AdminListingsPage() {
 
   return (
     <div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Listing</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Seller</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Price</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {listings.map((l) => (
-              <ListingStatusRow key={l.id} listing={l} />
-            ))}
-          </tbody>
-        </table>
-
-        {listings.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">No listings yet.</p>
-        )}
-      </div>
+      <ListingsTable listings={listings} />
     </div>
   );
 }

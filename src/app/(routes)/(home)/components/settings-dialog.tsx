@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
-import { Camera, Loader2, Monitor, Moon, Sun, User, SlidersHorizontal, X } from "lucide-react";
+import { Camera, Loader2, Monitor, Moon, Sun, User, SlidersHorizontal, Bell, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -19,6 +19,9 @@ import { updateUser, changePassword } from "@/lib/auth/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { compressAvatar } from "@/lib/compress-image";
 import { verifyCdnUrl } from "@/lib/verify-cdn-url";
+import { initials } from "@/lib/utils/initials";
+import { Switch } from "@/components/ui/switch";
+import type { NotifPrefs } from "@/db/schema/auth/user";
 
 type SettingsUser = {
   name: string;
@@ -29,11 +32,12 @@ type SettingsUser = {
   createdAt?: Date | string | null;
 };
 
-type Section = "account" | "preferences";
+type Section = "account" | "preferences" | "notifications";
 
 const NAV: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "account", label: "Account", icon: User },
   { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
+  { id: "notifications", label: "Notifications", icon: Bell },
 ];
 
 const THEMES = [
@@ -41,15 +45,6 @@ const THEMES = [
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: Monitor },
 ] as const;
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
 
 export default function SettingsDialog({
   open,
@@ -107,6 +102,7 @@ export default function SettingsDialog({
             {active === "preferences" && (
               <PreferencesSection theme={theme} setTheme={setTheme} />
             )}
+            {active === "notifications" && <NotificationsSection />}
           </div>
         </div>
       </DialogContent>
@@ -318,6 +314,108 @@ function AccountSection({ user }: { user: SettingsUser }) {
         </Button>
       </div>
 
+    </div>
+  );
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+
+const NOTIF_TYPES = [
+  { type: "new_offer",       label: "New offer",        description: "Someone made an offer on your listing" },
+  { type: "offer_accepted",  label: "Offer accepted",   description: "A seller accepted your offer" },
+  { type: "offer_rejected",  label: "Offer rejected",   description: "A seller rejected your offer" },
+  { type: "offer_countered", label: "Counter offer",    description: "A seller sent a counter-offer" },
+  { type: "offer_withdrawn", label: "Offer withdrawn",  description: "A buyer withdrew their offer" },
+  { type: "offer_message",   label: "New message",      description: "New message on an offer thread" },
+] as const;
+
+const DEFAULT_PREFS: NotifPrefs = {
+  email: {},
+  inApp: {},
+};
+
+function NotificationsSection() {
+  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings/notifications")
+      .then((r) => r.json())
+      .then(({ prefs: p }) => { if (p) setPrefs(p); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = useCallback(async (updated: NotifPrefs) => {
+    setSaving(true);
+    try {
+      await fetch("/api/settings/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const toggle = (channel: "email" | "inApp", type: string, value: boolean) => {
+    const updated = {
+      ...prefs,
+      [channel]: { ...prefs[channel], [type]: value },
+    };
+    setPrefs(updated);
+    save(updated);
+  };
+
+  const getPref = (channel: "email" | "inApp", type: string): boolean => {
+    return prefs[channel]?.[type] !== false; // undefined = on by default
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 size={16} className="animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {saving && (
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Loader2 size={10} className="animate-spin" /> Saving…
+        </p>
+      )}
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_48px_48px] items-center gap-2 pb-1 border-b border-border">
+        <p className="text-xs font-medium text-muted-foreground">Event</p>
+        <p className="text-[10px] text-muted-foreground text-center">In-app</p>
+        <p className="text-[10px] text-muted-foreground text-center">Email</p>
+      </div>
+
+      {NOTIF_TYPES.map(({ type, label, description }) => (
+        <div key={type} className="grid grid-cols-[1fr_48px_48px] items-center gap-2">
+          <div>
+            <p className="text-sm font-medium">{label}</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">{description}</p>
+          </div>
+          <div className="flex justify-center">
+            <Switch
+              checked={getPref("inApp", type)}
+              onCheckedChange={(v) => toggle("inApp", type, v)}
+            />
+          </div>
+          <div className="flex justify-center">
+            <Switch
+              checked={getPref("email", type)}
+              onCheckedChange={(v) => toggle("email", type, v)}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

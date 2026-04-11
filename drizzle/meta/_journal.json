@@ -8,6 +8,34 @@
       "when": 1775746988972,
       "tag": "0000_illegal_peter_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775829307955,
+      "tag": "0001_naive_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775829325028,
+      "tag": "0002_brief_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775894926822,
+      "tag": "0003_luxuriant_white_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775896395689,
+      "tag": "0004_polite_vargas",
+      "breakpoints": true
     }
   ]
 }

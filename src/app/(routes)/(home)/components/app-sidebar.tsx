@@ -13,12 +13,14 @@ import {
   IconSettings,
   IconBuildingStore,
   IconShieldHalf,
+  IconBell,
 } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -36,6 +38,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import SettingsDialog from "./settings-dialog";
+import { initials } from "@/lib/utils/initials";
 
 type SidebarUser = {
   name: string;
@@ -46,9 +49,10 @@ type SidebarUser = {
   createdAt?: Date | string | null;
 };
 
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
+type AppSidebarProps = {
+  user: SidebarUser;
+  unreadCount?: number;
+};
 
 const NAV_MAIN = [
   { title: "Dashboard", href: "/", icon: IconDashboard },
@@ -60,22 +64,43 @@ const NAV_ADMIN = [
   { title: "Admin", href: "/admin", icon: IconShieldHalf },
 ];
 
-const NAV_SECONDARY = [
-  { title: "Settings", icon: IconSettings },
-];
-
-function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: () => void }) {
+function NavUser({
+  user,
+  unreadCount,
+  onSettingsOpen,
+}: {
+  user: SidebarUser;
+  unreadCount: number;
+  onSettingsOpen: () => void;
+}) {
   const { isMobile } = useSidebar();
+  const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    await signOut({ fetchOptions: { onSuccess: () => router.push("/signin") } });
+    await signOut({ fetchOptions: { onSuccess: () => router.push("/") } });
   };
 
   return (
     <SidebarMenu>
+      {/* Notifications — grouped with footer */}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Notifications" isActive={pathname === "/notifications"}>
+          <Link href="/notifications" className="relative">
+            <IconBell />
+            <span>Notifications</span>
+            {unreadCount > 0 && (
+              <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
+      {/* Account menu */}
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -84,7 +109,7 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.image ?? undefined} alt={user.name} />
+                <AvatarImage src={user.image ? `${user.image}?u=${encodeURIComponent(user.email)}` : undefined} alt={user.name} />
                 <AvatarFallback className="rounded-lg text-xs">{initials(user.name)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
@@ -106,6 +131,8 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
               Settings
             </DropdownMenuItem>
 
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
               onSelect={handleSignOut}
               disabled={signingOut}
@@ -121,13 +148,13 @@ function NavUser({ user, onSettingsOpen }: { user: SidebarUser; onSettingsOpen: 
   );
 }
 
-export default function AppSidebar({ user }: { user: SidebarUser }) {
+export default function AppSidebar({ user, unreadCount = 0 }: AppSidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
-      <Sidebar collapsible="offcanvas">
+      <Sidebar collapsible="icon">
         {/* Brand */}
         <SidebarHeader>
           <SidebarMenu>
@@ -141,7 +168,7 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
           </SidebarMenu>
         </SidebarHeader>
 
-        <SidebarContent>
+        <SidebarContent className="overflow-x-hidden">
           {/* Main nav */}
           <SidebarGroup>
             <SidebarGroupContent className="flex flex-col gap-2">
@@ -202,8 +229,12 @@ export default function AppSidebar({ user }: { user: SidebarUser }) {
           )}
         </SidebarContent>
 
-        <SidebarFooter>
-          <NavUser user={user} onSettingsOpen={() => setSettingsOpen(true)} />
+        <SidebarFooter className="overflow-x-hidden">
+          <NavUser
+            user={user}
+            unreadCount={unreadCount}
+            onSettingsOpen={() => setSettingsOpen(true)}
+          />
         </SidebarFooter>
       </Sidebar>
 

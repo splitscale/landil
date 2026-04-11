@@ -6,37 +6,35 @@ import {
   authRoutes,
   DEFAULT_LOGIN_REDIRECT,
   publicRoutes,
+  publicPrefixes,
 } from "./routes";
 
 export async function proxy(request: NextRequest) {
   const session = getSessionCookie(request);
+  const { pathname } = request.nextUrl;
 
-  const isApiAuth = request.nextUrl.pathname.startsWith(apiAuthPrefix);
-  const isApiUploadThing = request.nextUrl.pathname.startsWith("/api/uploadthing");
-  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
-  const isPublicProfile = request.nextUrl.pathname.startsWith("/u/");
+  const isApiAuth = pathname.startsWith(apiAuthPrefix);
+  const isApiUploadThing = pathname.startsWith("/api/uploadthing");
+  const isApiRoute = pathname.startsWith("/api/");
+  const isInvitePage = pathname.startsWith("/invite/");
 
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname);
-
-  const isAuthRoute = () => {
-    return authRoutes.some((path) => request.nextUrl.pathname.startsWith(path));
-  };
-
-  // API routes handle their own auth — never redirect them to signin
-  if (isApiAuth || isApiUploadThing || isApiRoute || isPublicProfile) {
+  // API routes and special pages handle their own auth
+  if (isApiAuth || isApiUploadThing || isApiRoute || isInvitePage) {
     return NextResponse.next();
   }
 
-  if (isAuthRoute()) {
-    if (session) {
-      return NextResponse.redirect(
-        new URL(DEFAULT_LOGIN_REDIRECT, request.url),
-      );
-    }
+  const isAuthRoute = authRoutes.some((p) => pathname.startsWith(p));
+
+  if (isAuthRoute) {
+    if (session) return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, request.url));
     return NextResponse.next();
   }
 
-  if (!session && !isPublicRoute) {
+  const isPublic =
+    publicRoutes.includes(pathname) ||
+    publicPrefixes.some((p) => pathname.startsWith(p));
+
+  if (!session && !isPublic) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
@@ -45,13 +43,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

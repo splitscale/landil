@@ -1,27 +1,35 @@
 import { type Metadata } from "next";
 import SignInForm from "./form";
 import Link from "next/link";
+import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
   title: "Sign In",
   description: "Sign in to your Landil account to access land listings, due diligence tools, and market data.",
 };
 
-export default function SignInPage() {
+type Props = { searchParams: Promise<{ callbackUrl?: string }> };
+
+export default async function SignInPage({ searchParams }: Props) {
+  const { callbackUrl } = await searchParams;
+
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center pb-16">
       <div className="flex w-full flex-col rounded-2xl border border-foreground/10 px-8 py-5 md:w-96">
 
         <div className="mb-6">
+          <Link href="/" className="mb-4 inline-block text-xl font-bold tracking-tight">
+            Landil
+          </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Welcome back
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Good to see you again. Sign in to continue to Landil.
+            Good to see you again. Sign in to continue.
           </p>
         </div>
 
-        <SignInForm />
+        <SignInForm callbackUrl={callbackUrl} />
 
         <div className="flex items-center justify-center gap-2">
           <small>Don&apos;t have an account?</small>
@@ -29,6 +37,10 @@ export default function SignInPage() {
             Sign Up
           </Link>
         </div>
+      </div>
+
+      <div className="absolute bottom-0 w-full">
+        <Footer />
       </div>
     </div>
   );
