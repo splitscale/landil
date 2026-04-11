@@ -7,6 +7,7 @@ import { offer } from "@/db/schema/marketplace";
 import { getServerSession } from "@/lib/auth/get-session";
 import { after } from "next/server";
 import Link from "next/link";
+import { formatTime } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -18,12 +19,6 @@ const TYPE_STYLES: Record<string, string> = {
   offer_withdrawn: "bg-muted text-muted-foreground",
   offer_message: "bg-muted text-muted-foreground",
 };
-
-function formatTime(iso: Date | string) {
-  return new Date(iso).toLocaleString("en-PH", {
-    month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
-  });
-}
 
 async function markAllRead(userId: string) {
   await db
@@ -84,7 +79,7 @@ export default async function NotificationsPage() {
                     <p className="text-sm text-muted-foreground">{n.body}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_STYLES[n.type] ?? "bg-muted text-muted-foreground"}`}>
-                    {n.type.replace(/_/g, " ")}
+                    {n.type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())}
                   </span>
                 </div>
                 <p className="mt-2 text-[10px] text-muted-foreground">{formatTime(n.createdAt)}</p>

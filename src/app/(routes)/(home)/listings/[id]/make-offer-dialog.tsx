@@ -66,8 +66,9 @@ export default function MakeOfferDialog({
 
       <form onSubmit={submit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium">Your offer (₱)</label>
+          <label htmlFor="offer-amount" className="mb-1 block text-xs font-medium">Your offer (₱)</label>
           <input
+            id="offer-amount"
             type="text"
             inputMode="numeric"
             placeholder={formatted}
@@ -79,8 +80,9 @@ export default function MakeOfferDialog({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium">Note <span className="text-muted-foreground font-normal">(optional)</span></label>
+          <label htmlFor="offer-note" className="mb-1 block text-xs font-medium">Note <span className="text-muted-foreground font-normal">(optional)</span></label>
           <textarea
+            id="offer-note"
             rows={3}
             placeholder="Introduce yourself or explain your offer…"
             value={note}

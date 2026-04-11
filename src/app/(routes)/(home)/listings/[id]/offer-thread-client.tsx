@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { formatTime } from "@/lib/format";
 
 type Message = {
   id: string;
@@ -21,12 +22,6 @@ type Props = {
   canWithdraw?: boolean;
   canAct?: boolean; // seller: can accept/reject/counter
 };
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleString("en-PH", {
-    month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
-  });
-}
 
 export default function OfferThreadClient({
   offerId,
@@ -114,7 +109,9 @@ export default function OfferThreadClient({
 
       {/* Send message */}
       <form onSubmit={sendMessage} className="flex gap-2">
+        <label htmlFor="thread-message" className="sr-only">Message</label>
         <input
+          id="thread-message"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Send a message…"
@@ -161,7 +158,9 @@ export default function OfferThreadClient({
             </button>
           </div>
           <div className="flex gap-2">
+            <label htmlFor="counter-amount" className="sr-only">Counter amount</label>
             <input
+              id="counter-amount"
               type="text"
               inputMode="numeric"
               placeholder="Counter amount (₱)"

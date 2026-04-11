@@ -37,6 +37,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import SettingsDialog from "./settings-dialog";
+import { initials } from "@/lib/utils/initials";
 
 type SidebarUser = {
   name: string;
@@ -51,10 +52,6 @@ type AppSidebarProps = {
   user: SidebarUser;
   unreadCount?: number;
 };
-
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
 
 const NAV_MAIN = [
   { title: "Dashboard", href: "/", icon: IconDashboard },

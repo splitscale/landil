@@ -19,6 +19,7 @@ import { updateUser, changePassword } from "@/lib/auth/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { compressAvatar } from "@/lib/compress-image";
 import { verifyCdnUrl } from "@/lib/verify-cdn-url";
+import { initials } from "@/lib/utils/initials";
 
 type SettingsUser = {
   name: string;
@@ -41,15 +42,6 @@ const THEMES = [
   { value: "dark", label: "Dark", icon: Moon },
   { value: "system", label: "System", icon: Monitor },
 ] as const;
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
 
 export default function SettingsDialog({
   open,

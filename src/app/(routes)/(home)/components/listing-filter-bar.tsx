@@ -1,3 +1,6 @@
+"use client";
+
+import { useRef } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { PRICE_RANGES } from "@/lib/listings-browse";
@@ -18,15 +21,19 @@ export default function ListingFilterBar({
   propertyTypeOptions,
   clearHref,
 }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
   const hasFilters =
     query.length > 0 || propertyTypeFilter !== "all" || priceRangeFilter !== "all";
 
+  const submitForm = () => formRef.current?.submit();
+
   return (
-    <form>
+    <form ref={formRef}>
       <div className="flex h-10 w-full overflow-hidden rounded-lg border border-input bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
-        <label className="relative flex min-w-0 flex-1 items-center">
+        <label htmlFor="filter-q" className="relative flex min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-3 size-4 shrink-0 text-muted-foreground" />
           <input
+            id="filter-q"
             name="q"
             defaultValue={query}
             placeholder="Search listings…"
@@ -36,9 +43,12 @@ export default function ListingFilterBar({
 
         <div className="w-px self-stretch bg-input" />
 
+        <label htmlFor="filter-propertyType" className="sr-only">Property type</label>
         <select
+          id="filter-propertyType"
           name="propertyType"
           defaultValue={propertyTypeFilter}
+          onChange={submitForm}
           className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
         >
           <option value="all">All types</option>
@@ -49,9 +59,12 @@ export default function ListingFilterBar({
 
         <div className="w-px self-stretch bg-input" />
 
+        <label htmlFor="filter-priceRange" className="sr-only">Price range</label>
         <select
+          id="filter-priceRange"
           name="priceRange"
           defaultValue={priceRangeFilter}
+          onChange={submitForm}
           className="h-full cursor-pointer border-0 bg-transparent px-3 text-sm text-foreground outline-none"
         >
           {PRICE_RANGES.map((r) => (

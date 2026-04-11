@@ -6,12 +6,9 @@ import { listing } from "@/db/schema/listings";
 import { requireRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/get-session";
 import { MapPin } from "lucide-react";
+import { formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = { title: "My listings" };
-
-function formatPrice(pesos: number) {
-  return `₱${pesos.toLocaleString("en-PH")}`;
-}
 
 export default async function MyListingsPage() {
   await requireRole("seller", "admin");
@@ -36,7 +33,16 @@ export default async function MyListingsPage() {
       </div>
 
       {listings.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No listings yet.</p>
+        <div className="rounded-xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm font-medium">No listings yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">Create your first listing to start attracting buyers.</p>
+          <Link
+            href="/listings/new"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            New listing
+          </Link>
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((l) => (
