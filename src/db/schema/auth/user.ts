@@ -1,4 +1,9 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, json, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export type NotifPrefs = {
+  email: Partial<Record<string, boolean>>;
+  inApp: Partial<Record<string, boolean>>;
+};
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -12,6 +17,7 @@ export const user = pgTable("user", {
   gender: boolean("gender").notNull(),
   verified: boolean("verified").default(false).notNull(),
   plan: text("plan", { enum: ["free", "pro"] }).default("free").notNull(),
+  notificationPrefs: json("notification_prefs").$type<NotifPrefs>(),
   banned: boolean("banned").default(false),
   banReason: text("banReason"),
   banExpires: timestamp("banExpires"),

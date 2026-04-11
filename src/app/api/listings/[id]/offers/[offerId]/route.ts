@@ -7,8 +7,6 @@ import { listing } from "@/db/schema/listings";
 import { offer } from "@/db/schema/marketplace";
 import { user } from "@/db/schema/auth/user";
 import { createNotification } from "@/lib/notifications";
-import { sendNotificationEmail } from "@/lib/email";
-import { formatPrice } from "@/lib/format";
 
 const BodySchema = z.object({
   status: z.enum(["accepted", "rejected", "countered", "withdrawn"]),
@@ -95,40 +93,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       body: notifyBody,
       relatedId: offerId,
     });
-  }
-
-  // Email notification — buyer gets notified for accepted/rejected/countered
-  // Seller gets notified for withdrawn
-  if (status !== "withdrawn" && o.buyerEmail) {
-    sendNotificationEmail({
-      recipientEmail: o.buyerEmail,
-      type: `offer_${status}`,
-      title: notifyTitle,
-      body: notifyBody,
-      offerId,
-      listingId: id,
-      isBuyer: true,
-      ...(status === "countered" && counterAmount
-        ? { counterAmount: formatPrice(counterAmount) }
-        : {}),
-    }).catch(() => {});
-  } else if (status === "withdrawn" && o.sellerId) {
-    // Fetch seller email for withdrawal notification
-    const [seller] = await db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, o.sellerId));
-    if (seller?.email) {
-      sendNotificationEmail({
-        recipientEmail: seller.email,
-        type: "offer_withdrawn",
-        title: notifyTitle,
-        body: notifyBody,
-        offerId,
-        listingId: id,
-        isBuyer: false,
-      }).catch(() => {});
-    }
   }
 
   return NextResponse.json({ ok: true });
