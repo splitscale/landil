@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
-    headless: false,
+    headless: !!process.env.CI,
     video: "retain-on-failure",
     screenshot: "only-on-failure",
   },
