@@ -9,9 +9,10 @@ WEB        := landil-v2-web
 DB_URL     := postgres://postgres:postgres@localhost:$(DB_PORT)/landil
 API_URL    ?= http://localhost:$(API_PORT)# phone: make app API_URL=http://<LAN IP>:8080
 APP        := apps/app
+AVD        ?= Pixel_9_API_37# list them: emulator -list-avds
 
 .DEFAULT_GOAL := help
-.PHONY: help setup db db-reset api app web test check stop clean
+.PHONY: help setup db db-reset api app emulator android web test check stop clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
@@ -37,6 +38,15 @@ api: db ## Run the API on all interfaces (phones on the same Wi-Fi can reach it)
 
 app: ## Start the Expo dev server (w = web, a = Android, QR = Expo Go)
 	cd $(APP) && EXPO_PUBLIC_API_URL=$(API_URL) npx expo start --port $(WEB_PORT)
+
+emulator: ## Boot the Android emulator (AVD=name) if none is running
+	@adb devices | grep -q '^emulator-' || (nohup emulator -avd $(AVD) -no-snapshot-save >/dev/null 2>&1 &)
+	@adb wait-for-device
+	@until [ "$$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do sleep 2; done
+	@echo "emulator ready"
+
+android: emulator ## Run the app on the Android emulator (the API must be running: make api)
+	cd $(APP) && EXPO_PUBLIC_API_URL=http://10.0.2.2:$(API_PORT) npx expo start --android --port $(WEB_PORT)
 
 web: ## Build the static website and serve it with Caddy on WEB_PORT
 	cd $(APP) && EXPO_PUBLIC_API_URL=$(API_URL) npx expo export --platform web --output-dir dist
