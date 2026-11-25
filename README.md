@@ -1,10 +1,10 @@
 # Landil v2
 
-Landil v2 is a read-only MVP: guests browse published listings on Android, iOS and the web. It has two parts:
+Landil v2 is an MVP: guests browse published listings on Android, iOS and the web. It has two parts:
 
 | Folder | What it is |
 | -- | -- |
-| `server/` | Rust API (axum and sqlx). It reads the v1 database and never writes to it. |
+| `server/` | Rust API (axum and sqlx). It reads the v1 database. Its only write is a listing view (`listings.listing_view`). |
 | `apps/app/` | Expo app (Expo Router). The same code runs on Android, iOS and the web. |
 
 The v1 Next.js app is on the `main` branch.
@@ -40,6 +40,8 @@ To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your comp
 | `GET /health` | 200 when the database answers |
 | `GET /v1/listings?q=&type=&price=&cursor=&limit=` | Published listings, newest first, 20 per page, with `next_cursor` |
 | `GET /v1/listings/{id}` | One published listing: photos, public documents and the number of private documents |
+| `GET /v1/listings/{id}/similar` | Up to 4 published listings in the same province: same property type first, then the closest price |
+| `POST /v1/listings/{id}/views` | Body `{"device_id": "..."}`. Records a view, at most one per device and listing every 30 minutes (as in v1). Stores only a hash of the device ID. Returns 204 |
 
 | Variable | Default | Use |
 | -- | -- | -- |

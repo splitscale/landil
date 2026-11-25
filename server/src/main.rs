@@ -1,14 +1,16 @@
-//! Landil v2 API: read-only MVP (health, browse, listing detail).
+//! Landil v2 API MVP: health, browse, listing detail, similar listings and view tracking.
+//! The only write is a row in listings.listing_view (same rules as v1 src/lib/track-view.ts).
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::{HeaderValue, StatusCode},
+    http::{HeaderValue, Method, StatusCode, header::CONTENT_TYPE},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
 use tower_http::{compression::CompressionLayer, cors::CorsLayer};
 
@@ -225,6 +227,89 @@ async fn detail(
     Ok(Json(body))
 }
 
+// ---------- similar listings (LND-LST-13; v1 "comps": same province, published, not itself) ----------
+
+async fn similar(State(db): State<PgPool>, Path(id): Path<String>) -> AppResult<Page<ListingCard>> {
+    // Same type first, then the closest price. v1 took any 4 from the province.
+    let items: Vec<ListingCard> = sqlx::query_as(
+        r#"WITH me AS (SELECT province, property_type, asking_price FROM listings.listing
+                       WHERE id = $1 AND status = 'published')
+           SELECT l.id, l.title, l.asking_price, l.city, l.province, l.property_type, l.created_at,
+                  (SELECT url FROM listings.listing_photo ph WHERE ph.listing_id = l.id
+                   ORDER BY ph.cover DESC, ph.created_at LIMIT 1) AS cover_url
+           FROM listings.listing l, me
+           WHERE l.status = 'published' AND l.province = me.province AND l.id <> $1
+           ORDER BY (l.property_type = me.property_type) DESC,
+                    abs(l.asking_price::bigint - me.asking_price), l.id
+           LIMIT 4"#,
+    )
+    .bind(&id)
+    .fetch_all(&db)
+    .await?;
+    if items.is_empty() {
+        // Tell "no such listing" apart from "nothing similar".
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM listings.listing WHERE id = $1 AND status = 'published')",
+        )
+        .bind(&id)
+        .fetch_one(&db)
+        .await?;
+        if !exists {
+            return Err(AppError::NotFound);
+        }
+    }
+    Ok(Json(Page {
+        items,
+        next_cursor: None,
+    }))
+}
+
+// ---------- view tracking (ENT-307, LND-MOB-07: guests send a device ID) ----------
+
+#[derive(Deserialize)]
+struct ViewBody {
+    device_id: String,
+}
+
+/// The app makes a random ID once per install. Accept only that shape, so the column gets no junk.
+fn valid_device_id(id: &str) -> bool {
+    (16..=64).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
+/// Stored instead of the raw ID. 16 hex characters, like v1's hashed IP keys; the prefix keeps
+/// device keys apart from v1 user IDs and IP keys.
+fn device_viewer_key(device_id: &str) -> String {
+    let hash = Sha256::digest(device_id.as_bytes());
+    let hex: String = hash.iter().take(8).map(|b| format!("{b:02x}")).collect();
+    format!("device:{hex}")
+}
+
+/// 204 whether or not a row was added: a repeat view inside 30 minutes is not an error.
+async fn record_view(
+    State(db): State<PgPool>,
+    Path(id): Path<String>,
+    Json(body): Json<ViewBody>,
+) -> Result<StatusCode, AppError> {
+    if !valid_device_id(&body.device_id) {
+        return Err(AppError::BadRequest("Bad device_id"));
+    }
+    // One statement, so two requests at the same time cannot both pass the 30-minute check.
+    // ponytail: no seller self-view guard yet; it needs auth (ENT-317).
+    sqlx::query(
+        r#"INSERT INTO listings.listing_view (id, listing_id, viewer_key)
+           SELECT gen_random_uuid()::text, l.id, $2 FROM listings.listing l
+           WHERE l.id = $1 AND l.status = 'published'
+             AND NOT EXISTS (SELECT 1 FROM listings.listing_view v
+                             WHERE v.listing_id = l.id AND v.viewer_key = $2
+                               AND v.created_at > now() - interval '30 minutes')"#,
+    )
+    .bind(&id)
+    .bind(device_viewer_key(&body.device_id))
+    .execute(&db)
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn health(State(db): State<PgPool>) -> StatusCode {
     match sqlx::query("SELECT 1").execute(&db).await {
         Ok(_) => StatusCode::OK,
@@ -242,7 +327,14 @@ fn app(db: PgPool) -> Router {
         .route("/health", get(health))
         .route("/v1/listings", get(browse))
         .route("/v1/listings/{id}", get(detail))
-        .layer(CorsLayer::new().allow_origin(origins))
+        .route("/v1/listings/{id}/similar", get(similar))
+        .route("/v1/listings/{id}/views", post(record_view))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(origins)
+                .allow_methods([Method::GET, Method::POST])
+                .allow_headers([CONTENT_TYPE]),
+        )
         .layer(CompressionLayer::new())
         .with_state(db)
 }
@@ -276,6 +368,20 @@ mod tests {
             Some((at, "l7".into()))
         );
         assert_eq!(decode_cursor("junk"), None);
+    }
+
+    #[test]
+    fn device_ids() {
+        assert!(valid_device_id("3f2a9c1e-7b4d-4e8a-9f10-2c3d4e5f6a7b"));
+        assert!(!valid_device_id("short"));
+        assert!(!valid_device_id("has spaces and is long enough"));
+        assert!(!valid_device_id(&"a".repeat(65)));
+        let key = device_viewer_key("3f2a9c1e-7b4d-4e8a-9f10-2c3d4e5f6a7b");
+        assert!(key.starts_with("device:") && key.len() == "device:".len() + 16);
+        assert_eq!(
+            key,
+            device_viewer_key("3f2a9c1e-7b4d-4e8a-9f10-2c3d4e5f6a7b")
+        );
     }
 
     #[test]
