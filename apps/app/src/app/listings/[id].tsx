@@ -18,7 +18,6 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -29,6 +28,7 @@ import { IconText, Money } from '@/components/icon-text';
 import { ListingCard } from '@/components/listing-card';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { deviceId } from '@/lib/device';
+import { shareLink } from '@/lib/share';
 import { api, SITE_URL, type ListingCard as Card, type ListingDetail, type Page } from '@/lib/api';
 
 export default function Listing() {
@@ -39,6 +39,7 @@ export default function Listing() {
   const [listing, setListing] = useState<ListingDetail>();
   const [error, setError] = useState<string>();
   const [similar, setSimilar] = useState<Card[]>([]);
+  const [shareNote, setShareNote] = useState<string>();
 
   const load = useCallback(() => {
     setError(undefined);
@@ -133,9 +134,14 @@ export default function Listing() {
 
         <Pressable
           style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => Share.share({ message: `${listing.title}: ${SITE_URL}/listings/${listing.id}` })}>
+          onPress={async () => {
+            const result = await shareLink(listing.title, `${SITE_URL}/listings/${listing.id}`);
+            const note = { copied: 'Link copied', failed: 'Could not share. Try again.', shared: undefined }[result];
+            setShareNote(note);
+            if (note) setTimeout(() => setShareNote(undefined), 2500);
+          }}>
           <IconText icon={Share2} color="#fff" size={16} style={styles.buttonText}>
-            Share
+            {shareNote ?? 'Share'}
           </IconText>
         </Pressable>
       </View>
