@@ -150,6 +150,8 @@ fn check_password(p: &str) -> Result<(), &'static str> {
 
 // ---------- the signed-in user ----------
 
+const SESSION_ENDED: &str = "Your session has ended. Sign in again.";
+
 #[derive(Serialize, FromRow, Clone)]
 pub struct User {
     pub id: String,
@@ -194,7 +196,7 @@ impl FromRequestParts<PgPool> for CurrentUser {
 
     async fn from_request_parts(parts: &mut Parts, db: &PgPool) -> Result<Self, AppError> {
         let token = bearer(&parts.headers)
-            .ok_or(AppError::Unauthorized)?
+            .ok_or(AppError::Unauthorized(SESSION_ENDED))?
             .to_string();
         #[derive(FromRow)]
         struct Row {
@@ -215,7 +217,7 @@ impl FromRequestParts<PgPool> for CurrentUser {
         .bind(&token)
         .fetch_optional(db)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Unauthorized(SESSION_ENDED))?;
         if row.banned {
             return Err(AppError::Forbidden("This account is banned"));
         }
@@ -388,7 +390,7 @@ pub async fn sign_in(
     let ok = blocking(move || verify_password(&hash, &password)).await;
     let row = match row {
         Some(r) if ok && r.password.is_some() => r,
-        _ => return Err(AppError::Unauthorized),
+        _ => return Err(AppError::Unauthorized("Wrong username or password.")),
     };
     if row.banned {
         return Err(AppError::Forbidden("This account is banned"));

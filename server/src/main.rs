@@ -24,7 +24,8 @@ use tower_http::{compression::CompressionLayer, cors::CorsLayer};
 pub(crate) enum AppError {
     NotFound,
     BadRequest(&'static str),
-    Unauthorized,
+    /// Sign-in uses one message for unknown user and wrong password: no hint which it was.
+    Unauthorized(&'static str),
     Forbidden(&'static str),
     Conflict(&'static str),
     Db(sqlx::Error),
@@ -41,12 +42,7 @@ impl IntoResponse for AppError {
         let (status, code, message) = match self {
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found", "Not found"),
             AppError::BadRequest(m) => (StatusCode::BAD_REQUEST, "bad_request", m),
-            // One message for unknown user, wrong password and expired session: no hints.
-            AppError::Unauthorized => (
-                StatusCode::UNAUTHORIZED,
-                "unauthorized",
-                "Wrong username or password, or your session has ended",
-            ),
+            AppError::Unauthorized(m) => (StatusCode::UNAUTHORIZED, "unauthorized", m),
             AppError::Forbidden(m) => (StatusCode::FORBIDDEN, "forbidden", m),
             AppError::Conflict(m) => (StatusCode::CONFLICT, "conflict", m),
             AppError::Db(e) => {

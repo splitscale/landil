@@ -31,6 +31,35 @@ export type ListingDetail = ListingCard & {
   private_document_count: number;
 };
 
+export type User = {
+  id: string;
+  name: string;
+  username: string | null;
+  email: string;
+  image: string | null;
+  role: string;
+  plan: string;
+  verified: boolean;
+};
+
+export type Session = { token: string; user: User };
+
+/** An error the API answered with. status 0: the API could not be reached. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+// Set by SessionProvider (lib/session.tsx). Sent on every request while signed in.
+let authToken: string | undefined;
+export const setAuthToken = (t: string | undefined) => {
+  authToken = t;
+};
+
 export async function api<T>(
   path: string,
   params?: Record<string, string | undefined>,
@@ -43,19 +72,20 @@ export async function api<T>(
   try {
     res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, {
       signal: AbortSignal.timeout(15_000),
-      ...(body !== undefined && {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
+      method: body !== undefined ? 'POST' : 'GET',
+      headers: {
+        ...(body !== undefined && { 'content-type': 'application/json' }),
+        ...(authToken && { authorization: `Bearer ${authToken}` }),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error('Cannot reach Landil. Check your connection and try again.');
+    throw new ApiError('Cannot reach Landil. Check your connection and try again.', 0);
   }
-  if (res.status >= 500) throw new Error('Something went wrong on our side. Try again in a moment.');
+  if (res.status >= 500) throw new ApiError('Something went wrong on our side. Try again in a moment.', res.status);
   if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.error?.message ?? `HTTP ${res.status}`);
+    const err = await res.json().catch(() => null);
+    throw new ApiError(err?.error?.message ?? `HTTP ${res.status}`, res.status);
   }
   return res.status === 204 ? (undefined as T) : res.json();
 }
