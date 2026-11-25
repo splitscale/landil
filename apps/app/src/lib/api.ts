@@ -35,7 +35,13 @@ export async function api<T>(path: string, params?: Record<string, string | unde
   const qs = new URLSearchParams(
     Object.entries(params ?? {}).filter((e): e is [string, string] => !!e[1]),
   ).toString();
-  const res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, { signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new Error('Cannot reach Landil. Check your connection and try again.');
+  }
+  if (res.status >= 500) throw new Error('Something went wrong on our side. Try again in a moment.');
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.error?.message ?? `HTTP ${res.status}`);

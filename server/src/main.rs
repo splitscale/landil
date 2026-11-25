@@ -9,7 +9,7 @@ use axum::{
 use chrono::{DateTime, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
 use tower_http::{compression::CompressionLayer, cors::CorsLayer};
 
 // ---------- errors (LND-API-05) ----------
@@ -250,7 +250,12 @@ fn app(db: PgPool) -> Router {
 #[tokio::main]
 async fn main() {
     let url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let db = PgPool::connect(&url).await.expect("database connection");
+    // Fail fast when the database is down, instead of the default 30 s wait for a connection.
+    let db = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(5))
+        .connect(&url)
+        .await
+        .expect("database connection");
     let addr = std::env::var("BIND").unwrap_or_else(|_| "0.0.0.0:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind");
     println!("landil-api on {addr}");
