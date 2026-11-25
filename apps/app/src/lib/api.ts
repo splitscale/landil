@@ -31,13 +31,24 @@ export type ListingDetail = ListingCard & {
   private_document_count: number;
 };
 
-export async function api<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
+export async function api<T>(
+  path: string,
+  params?: Record<string, string | undefined>,
+  body?: unknown, // given: POST it as JSON
+): Promise<T> {
   const qs = new URLSearchParams(
     Object.entries(params ?? {}).filter((e): e is [string, string] => !!e[1]),
   ).toString();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, { signal: AbortSignal.timeout(15_000) });
+    res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, {
+      signal: AbortSignal.timeout(15_000),
+      ...(body !== undefined && {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    });
   } catch {
     throw new Error('Cannot reach Landil. Check your connection and try again.');
   }
@@ -46,5 +57,5 @@ export async function api<T>(path: string, params?: Record<string, string | unde
     const body = await res.json().catch(() => null);
     throw new Error(body?.error?.message ?? `HTTP ${res.status}`);
   }
-  return res.json();
+  return res.status === 204 ? (undefined as T) : res.json();
 }

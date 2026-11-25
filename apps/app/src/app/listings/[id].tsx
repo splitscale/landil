@@ -26,8 +26,10 @@ import {
 } from 'react-native';
 
 import { IconText, Money } from '@/components/icon-text';
+import { ListingCard } from '@/components/listing-card';
 import { PhotoGallery } from '@/components/photo-gallery';
-import { api, SITE_URL, type ListingDetail } from '@/lib/api';
+import { deviceId } from '@/lib/device';
+import { api, SITE_URL, type ListingCard as Card, type ListingDetail, type Page } from '@/lib/api';
 
 export default function Listing() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,12 +38,21 @@ export default function Listing() {
   const wide = width >= 900; // LND-MOB-11: gallery and details side by side
   const [listing, setListing] = useState<ListingDetail>();
   const [error, setError] = useState<string>();
+  const [similar, setSimilar] = useState<Card[]>([]);
 
   const load = useCallback(() => {
     setError(undefined);
     api<ListingDetail>(`/v1/listings/${id}`).then(setListing, (e: Error) => setError(e.message));
   }, [id]);
   useEffect(load, [load]);
+
+  useEffect(() => {
+    // Side data: a failure here must not break the screen, so it is ignored.
+    api<Page<Card>>(`/v1/listings/${id}/similar`).then((p) => setSimilar(p.items), () => {});
+    deviceId()
+      .then((device_id) => api(`/v1/listings/${id}/views`, undefined, { device_id }))
+      .catch(() => {});
+  }, [id]);
 
   if (error) {
     return (
@@ -107,6 +118,19 @@ export default function Listing() {
           </Link>
         )}
 
+        {similar.length > 0 && (
+          <View style={styles.similar}>
+            <Text style={[text, styles.section]}>Similar listings in {listing.province}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.similarRow}>
+              {similar.map((l) => (
+                <View key={l.id} style={styles.similarCard}>
+                  <ListingCard item={l} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <Pressable
           style={[styles.button, { backgroundColor: colors.primary }]}
           onPress={() => Share.share({ message: `${listing.title}: ${SITE_URL}/listings/${listing.id}` })}>
@@ -133,6 +157,10 @@ const styles = StyleSheet.create({
   docs: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, padding: 14, borderWidth: 1, borderRadius: 12 },
   docsLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
   muted: { color: '#888' },
+  section: { fontSize: 16, fontWeight: '600' },
+  similar: { marginTop: 16, gap: 10 },
+  similarRow: { gap: 12 },
+  similarCard: { width: 240 },
   center: { textAlign: 'center' },
   button: { marginTop: 16, padding: 14, borderRadius: 8, alignItems: 'center' },
   buttonText: { fontWeight: '600' },
