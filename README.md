@@ -1,164 +1,61 @@
-# Landil
+# Landil v2
 
-Real estate marketplace — Next.js 16 · Better Auth · Drizzle ORM · Supabase · Redis · UploadThing
+Landil v2 is a read-only MVP: guests browse published listings on Android, iOS and the web. It has two parts:
 
----
+| Folder | What it is |
+| -- | -- |
+| `server/` | Rust API (axum and sqlx). It reads the v1 database and never writes to it. |
+| `apps/app/` | Expo app (Expo Router). The same code runs on Android, iOS and the web. |
 
-## Stack
+The v1 Next.js app is on the `main` branch.
 
-| Layer | Tech |
-|-------|------|
-| Framework | Next.js 16 App Router (Turbopack) |
-| Auth | Better Auth |
-| ORM | Drizzle ORM + drizzle-kit |
-| Database | Supabase (PostgreSQL) |
-| Cache / Pub-Sub | Redis (ioredis) |
-| File uploads | UploadThing |
-| UI | Tailwind CSS v4 · shadcn/ui · Radix UI |
-| Forms | React Hook Form + Zod |
-| Email | Nodemailer (SMTP) |
-| E2E tests | Playwright |
+## Run locally
 
----
-
-## Local Development
-
-### Option A — Native (needs external Supabase + Redis)
+You need Docker, Rust 1.98 or later, and Node 26 (see `.nvmrc`).
 
 ```bash
-cp env.example .env        # fill in all values
-bun install
-bun db:migrate             # push schema to DB
-bun dev                    # http://localhost:3000
+make setup   # one time: install the app dependencies
+make api     # start the test database (Postgres 17, v1 schema, test data) and the API on :8080
+make app     # in a second terminal: w = web, a = Android, QR code = Expo Go
 ```
 
-### Option B — Docker Compose (fully local, no external services)
+Run `make` to see all targets.
 
-Spins up Postgres, Redis, and Mailpit (local SMTP) alongside the app.
+### On a phone over USB
+
+1. Turn on USB debugging on the phone and connect it. `adb devices` must show it as `device`.
+2. Forward the ports, so the phone's `localhost` reaches your computer:
+   ```bash
+   adb reverse tcp:8080 tcp:8080   # API
+   adb reverse tcp:8081 tcp:8081   # Metro
+   ```
+3. Run `make app`, then press `a`. The app opens in Expo Go. Install Expo Go from the Play Store first.
+
+To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your computer>:8080` and scan the QR code.
+
+## API
+
+| Route | Result |
+| -- | -- |
+| `GET /health` | 200 when the database answers |
+| `GET /v1/listings?q=&type=&price=&cursor=&limit=` | Published listings, newest first, 20 per page, with `next_cursor` |
+| `GET /v1/listings/{id}` | One published listing: photos, public documents and the number of private documents |
+
+| Variable | Default | Use |
+| -- | -- | -- |
+| `DATABASE_URL` | (required) | Postgres connection string |
+| `BIND` | `0.0.0.0:8080` | Address and port to listen on |
+| `CORS_ORIGINS` | `http://localhost:8081` | Comma-separated website origins that can call the API |
+
+The app reads `EXPO_PUBLIC_API_URL` (default `http://localhost:8080`; `make app` sets it from `API_URL`) and `EXPO_PUBLIC_SITE_URL` (default `http://localhost:8081`).
+
+## Checks
 
 ```bash
-cp .env.local.example .env.local   # add UPLOADTHING_TOKEN, Google OAuth creds
-docker compose up --build
+make check   # cargo fmt, clippy and the app type check (CI runs these)
+make test    # API unit tests
 ```
 
-Services:
+## Web build
 
-| Service | URL |
-|---------|-----|
-| App | http://localhost:3000 |
-| Postgres | localhost:5432 |
-| Redis | localhost:6379 |
-| Mailpit (SMTP UI) | http://localhost:8025 |
-
-Migrations run automatically on container start via the `prestart` script.
-
----
-
-## Environment Variables
-
-Copy `env.example` to `.env` and fill in:
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | Supabase pooled connection (runtime, `postgres-js`) |
-| `DIRECT_URL` | Supabase direct connection (migrations only, `drizzle-kit`) |
-| `BETTER_AUTH_SECRET` | Session signing secret — any random string |
-| `NEXT_PUBLIC_BASE_URL` | Base URL e.g. `http://localhost:3000` |
-| `UPLOADTHING_TOKEN` | From [uploadthing.com/dashboard](https://uploadthing.com/dashboard) |
-| `GOOGLE_CLIENT_ID` | Google OAuth — authorized redirect: `{BASE_URL}/api/auth/callback/google` |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth |
-| `REDIS_URL` | Redis connection e.g. `redis://localhost:6379` |
-| `SMTP_HOST` | SMTP host (use `mailpit` hostname when using Docker Compose) |
-| `SMTP_PORT` | SMTP port (Mailpit: `1025`) |
-| `SMTP_USER` / `SMTP_PASS` | SMTP credentials (leave blank for Mailpit) |
-| `SMTP_FROM` | From address e.g. `Landil <no-reply@landil.app>` |
-
----
-
-## Commands
-
-```bash
-bun dev              # dev server (Turbopack)
-bun build            # production build
-bun start            # production server (runs migrations first via prestart)
-bun run lint         # ESLint
-bun db:migrate       # push schema changes to DB (drizzle-kit push)
-bun db:generate      # generate migration files
-bun db:studio        # Drizzle Studio UI
-bun e2e              # Playwright tests (needs app running)
-bun e2e:ui           # Playwright interactive UI
-```
-
----
-
-## Database Migrations
-
-Schema lives in `src/db/schema/`. To add or change tables:
-
-1. Edit or add a schema file under `src/db/schema/`
-2. Export it from `src/db/schema/index.ts`
-3. Run `bun db:migrate`
-
-`drizzle.config.ts` uses `DIRECT_URL` (not `DATABASE_URL`) — the direct connection is required for migrations; the pooled connection does not support DDL.
-
----
-
-## Adding Routes
-
-Middleware (`src/proxy.ts`) redirects unauthenticated users to `/signin` by default.
-
-- **Public routes** (no auth required): add to `publicRoutes` or `publicPrefixes` in `src/routes.ts`
-- **Auth-only routes** (redirect authenticated users away): add to `authRoutes`
-- **Webhook / server callback routes**: exempt from middleware explicitly in `src/proxy.ts` (see common issues below)
-
----
-
-## CI / CD
-
-GitHub Actions workflow at `.github/workflows/ci.yml`:
-
-- **`build` job** — runs on every push and PR: lint → type check → build with dummy env vars
-- **`e2e` job** — runs on push to `main`/`staging` only: spins up postgres + redis service containers, runs migrations, starts the app, then runs Playwright
-
-To enable full e2e coverage add these GitHub Secrets to the repo:
-`UPLOADTHING_TOKEN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-
----
-
-## Common Issues
-
-### `onUploadComplete` never runs / DB writes silently skipped after upload
-
-UploadThing's servers POST back to `/api/uploadthing` after a file is uploaded — with no session cookie. The auth middleware in `src/proxy.ts` was catching this and redirecting to `/signin` before the route handler ran.
-
-**Fix:** `/api/uploadthing` is already exempted in `proxy.ts`. Any new webhook or server-to-server callback (Stripe, Resend, etc.) must be exempted the same way — these endpoints will never carry a session cookie.
-
----
-
-### `bun install --frozen-lockfile` fails in CI with "lockfile had changes"
-
-The lockfile was generated with a different bun version than CI pulled. CI is pinned to match the local lockfile version. If you upgrade bun locally, regenerate the lockfile (`bun install`) and update the pinned version in `.github/workflows/ci.yml`.
-
----
-
-### `next lint` fails with "Invalid project directory: .../lint"
-
-Running `bun lint` (without `run`) in some environments passes the script name as a positional argument to Next.js. Use `bun run lint` explicitly in scripts and CI.
-
----
-
-### Playwright tests fail in CI with display errors
-
-`headless: false` requires a display server. The config uses `headless: !!process.env.CI` — headed locally, headless in Actions. Ensure `CI=true` is set in any CI-like environment.
-
----
-
-### `drizzle-kit push` prompts interactively and hangs in CI / Docker
-
-`drizzle-kit push` asks for confirmation when it detects destructive changes. The `prestart` script uses `--force` to skip prompts in non-interactive environments. Do not use `--force` manually in production without reviewing the diff first (`bun db:generate` → review → `bun db:migrate`).
-
----
-
-### `DIRECT_URL` vs `DATABASE_URL` — migrations fail on pooled connection
-
-`DATABASE_URL` goes through Supabase's pgbouncer (connection pooler) which does not support the prepared statements and transaction modes that DDL requires. Always use `DIRECT_URL` for `drizzle-kit`. In Docker Compose both point to the same local Postgres since there is no pooler.
+`make web` builds the static website and serves it with Caddy on http://localhost:8081.
