@@ -4,7 +4,7 @@ Landil v2 is an MVP: guests browse published listings on Android, iOS and the we
 
 | Folder | What it is |
 | -- | -- |
-| `server/` | Rust API (axum and sqlx). It reads the v1 database. Its only write is a listing view (`listings.listing_view`). |
+| `server/` | Rust API (axum and sqlx) on the v1 database. It writes listing views, and accounts and sessions for sign-in. |
 | `apps/app/` | Expo app (Expo Router). The same code runs on Android, iOS and the web. |
 
 The v1 Next.js app is on the `main` branch.
@@ -41,6 +41,10 @@ To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your comp
 | `GET /v1/listings?q=&type=&price=&cursor=&limit=` | Published listings, newest first, 20 per page, with `next_cursor` |
 | `GET /v1/listings/{id}` | One published listing: photos, public documents and the number of private documents |
 | `GET /v1/listings/{id}/similar` | Up to 4 published listings in the same province: same property type first, then the closest price |
+| `POST /v1/auth/sign-up` | Body `{username, password, name, email, gender}`. Creates the account and returns `{token, user}` (201). `role`, `plan` and `verified` in the body are ignored |
+| `POST /v1/auth/sign-in` | Body `{username, password}`. Returns `{token, user}`. 401 for a wrong username or password, 403 for a banned account |
+| `POST /v1/auth/sign-out` | Ends the session in `Authorization: Bearer <token>`. 204 |
+| `GET /v1/me` | The signed-in user. 401 without a valid session |
 | `POST /v1/listings/{id}/views` | Body `{"device_id": "..."}`. Records a view, at most one per device and listing every 30 minutes (as in v1). Stores only a hash of the device ID. Returns 204 |
 
 | Variable | Default | Use |
@@ -48,6 +52,8 @@ To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your comp
 | `DATABASE_URL` | (required) | Postgres connection string |
 | `BIND` | `0.0.0.0:8080` | Address and port to listen on |
 | `CORS_ORIGINS` | `http://localhost:8081` | Comma-separated website origins that can call the API |
+
+Sign-in uses the v1 Better Auth tables (`user`, `account`, `session`) and its password hash format, so v1 accounts sign in to v2 with their v1 passwords, and passwords set in v2 work in v1. Test accounts in the local database: `seller1` / `seller1-password`, and the banned `banned1` / `banned-password`.
 
 The app reads `EXPO_PUBLIC_API_URL` (default `http://localhost:8080`; `make app` sets it from `API_URL`) and `EXPO_PUBLIC_SITE_URL` (default `http://localhost:8081`).
 

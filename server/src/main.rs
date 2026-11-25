@@ -1,9 +1,14 @@
 //! Landil v2 API MVP: health, browse, listing detail, similar listings and view tracking.
-//! The only write is a row in listings.listing_view (same rules as v1 src/lib/track-view.ts).
+//! Writes: listing views (same rules as v1 src/lib/track-view.ts), and accounts and sessions (auth.rs).
+mod auth;
+
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::{HeaderValue, Method, StatusCode, header::CONTENT_TYPE},
+    http::{
+        HeaderValue, Method, StatusCode,
+        header::{AUTHORIZATION, CONTENT_TYPE},
+    },
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -16,9 +21,12 @@ use tower_http::{compression::CompressionLayer, cors::CorsLayer};
 
 // ---------- errors (LND-API-05) ----------
 
-enum AppError {
+pub(crate) enum AppError {
     NotFound,
     BadRequest(&'static str),
+    Unauthorized,
+    Forbidden(&'static str),
+    Conflict(&'static str),
     Db(sqlx::Error),
 }
 
@@ -33,6 +41,14 @@ impl IntoResponse for AppError {
         let (status, code, message) = match self {
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found", "Not found"),
             AppError::BadRequest(m) => (StatusCode::BAD_REQUEST, "bad_request", m),
+            // One message for unknown user, wrong password and expired session: no hints.
+            AppError::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "unauthorized",
+                "Wrong username or password, or your session has ended",
+            ),
+            AppError::Forbidden(m) => (StatusCode::FORBIDDEN, "forbidden", m),
+            AppError::Conflict(m) => (StatusCode::CONFLICT, "conflict", m),
             AppError::Db(e) => {
                 eprintln!("db error: {e}");
                 (
@@ -329,11 +345,15 @@ fn app(db: PgPool) -> Router {
         .route("/v1/listings/{id}", get(detail))
         .route("/v1/listings/{id}/similar", get(similar))
         .route("/v1/listings/{id}/views", post(record_view))
+        .route("/v1/auth/sign-up", post(auth::sign_up))
+        .route("/v1/auth/sign-in", post(auth::sign_in))
+        .route("/v1/auth/sign-out", post(auth::sign_out))
+        .route("/v1/me", get(auth::me))
         .layer(
             CorsLayer::new()
                 .allow_origin(origins)
                 .allow_methods([Method::GET, Method::POST])
-                .allow_headers([CONTENT_TYPE]),
+                .allow_headers([CONTENT_TYPE, AUTHORIZATION]),
         )
         .layer(CompressionLayer::new())
         .with_state(db)
