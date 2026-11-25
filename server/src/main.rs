@@ -1,6 +1,7 @@
 //! Landil v2 API MVP: health, browse, listing detail, similar listings and view tracking.
 //! Writes: listing views (same rules as v1 src/lib/track-view.ts), and accounts and sessions (auth.rs).
 mod auth;
+mod ratelimit;
 
 use axum::{
     Json, Router,
@@ -28,6 +29,8 @@ pub(crate) enum AppError {
     Unauthorized(&'static str),
     Forbidden(&'static str),
     Conflict(&'static str),
+    /// Seconds until the caller may try again.
+    TooMany(u64),
     Db(sqlx::Error),
 }
 
@@ -45,6 +48,19 @@ impl IntoResponse for AppError {
             AppError::Unauthorized(m) => (StatusCode::UNAUTHORIZED, "unauthorized", m),
             AppError::Forbidden(m) => (StatusCode::FORBIDDEN, "forbidden", m),
             AppError::Conflict(m) => (StatusCode::CONFLICT, "conflict", m),
+            AppError::TooMany(secs) => {
+                let minutes = secs.div_ceil(60);
+                let message = format!(
+                    "Too many tries. Try again in {minutes} minute{}.",
+                    if minutes == 1 { "" } else { "s" }
+                );
+                return (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    [(axum::http::header::RETRY_AFTER, secs.to_string())],
+                    Json(json!({ "error": { "code": "too_many_requests", "message": message } })),
+                )
+                    .into_response();
+            }
             AppError::Db(e) => {
                 eprintln!("db error: {e}");
                 (
@@ -367,7 +383,13 @@ async fn main() {
     let addr = std::env::var("BIND").unwrap_or_else(|_| "0.0.0.0:8080".into());
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind");
     println!("landil-api on {addr}");
-    axum::serve(listener, app(db)).await.expect("server");
+    // Connect info: the peer address is the client IP for rate limits (ratelimit::client_ip).
+    axum::serve(
+        listener,
+        app(db).into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .expect("server");
 }
 
 #[cfg(test)]

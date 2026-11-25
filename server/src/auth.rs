@@ -8,9 +8,11 @@
 //!
 //! ponytail: not yet here, all in ENT-317: website cookie, Google and Apple sign-in, rate limits,
 //! password change and reset.
+use std::net::SocketAddr;
+
 use axum::{
     Json,
-    extract::{FromRequestParts, State},
+    extract::{ConnectInfo, FromRequestParts, State},
     http::{HeaderMap, StatusCode, header, request::Parts},
 };
 use rand::RngExt;
@@ -19,7 +21,10 @@ use sqlx::{FromRow, PgPool};
 use subtle::ConstantTimeEq;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::AppError;
+use crate::{
+    AppError,
+    ratelimit::{SIGN_IN_FAILURES, SIGN_IN_IP, SIGN_UP_IP, client_ip},
+};
 
 // ---------- passwords ----------
 
@@ -266,15 +271,10 @@ pub struct SignIn {
 async fn create_session<'e>(
     tx: impl sqlx::PgExecutor<'e>,
     user_id: &str,
+    ip: &str,
     headers: &HeaderMap,
 ) -> Result<String, AppError> {
     let token = generate_id();
-    let ip = headers
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.split(',').next())
-        .map(|v| v.trim().to_string())
-        .unwrap_or_default();
     let agent = headers
         .get(header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
@@ -295,9 +295,12 @@ async fn create_session<'e>(
 
 pub async fn sign_up(
     State(db): State<PgPool>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(b): Json<SignUp>,
 ) -> Result<(StatusCode, Json<SessionResponse>), AppError> {
+    let ip = client_ip(peer, &headers).to_string();
+    SIGN_UP_IP.check(&ip).map_err(AppError::TooMany)?;
     let username = normalize_username(&b.username).map_err(AppError::BadRequest)?;
     check_password(&b.password).map_err(AppError::BadRequest)?;
     let name = b.name.trim().to_string();
@@ -341,7 +344,7 @@ pub async fn sign_up(
     .bind(&hash)
     .execute(&mut *tx)
     .await?;
-    let token = create_session(&mut *tx, &user_id, &headers).await?;
+    let token = create_session(&mut *tx, &user_id, &ip, &headers).await?;
     let user: User = sqlx::query_as(concat!(
         "SELECT ",
         user_columns!(),
@@ -351,14 +354,25 @@ pub async fn sign_up(
     .fetch_one(&mut *tx)
     .await?;
     tx.commit().await?;
+    SIGN_UP_IP.hit(&ip); // only accounts made count: typos in the form do not
     Ok((StatusCode::CREATED, Json(SessionResponse { token, user })))
 }
 
 pub async fn sign_in(
     State(db): State<PgPool>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(b): Json<SignIn>,
 ) -> Result<Json<SessionResponse>, AppError> {
+    let ip = client_ip(peer, &headers).to_string();
+    let username = b.username.trim().to_lowercase();
+    // Checked before the password, so a locked username stays locked even for the right password:
+    // otherwise the 6th guess could still succeed. Cost: someone can lock a username for 15 min.
+    SIGN_IN_IP.check(&ip).map_err(AppError::TooMany)?;
+    SIGN_IN_FAILURES
+        .check(&username)
+        .map_err(AppError::TooMany)?;
+    SIGN_IN_IP.hit(&ip);
     #[derive(FromRow)]
     struct Row {
         #[sqlx(flatten)]
@@ -375,7 +389,7 @@ pub async fn sign_in(
            FROM "user" u LEFT JOIN account a ON a."userId" = u.id AND a."providerId" = 'credential'
            WHERE u.username = $1"#
     ))
-    .bind(b.username.trim().to_lowercase())
+    .bind(&username)
     .fetch_optional(&db)
     .await?;
 
@@ -390,12 +404,16 @@ pub async fn sign_in(
     let ok = blocking(move || verify_password(&hash, &password)).await;
     let row = match row {
         Some(r) if ok && r.password.is_some() => r,
-        _ => return Err(AppError::Unauthorized("Wrong username or password.")),
+        _ => {
+            SIGN_IN_FAILURES.hit(&username);
+            return Err(AppError::Unauthorized("Wrong username or password."));
+        }
     };
+    SIGN_IN_FAILURES.clear(&username);
     if row.banned {
         return Err(AppError::Forbidden("This account is banned"));
     }
-    let token = create_session(&db, &row.user.id, &headers).await?;
+    let token = create_session(&db, &row.user.id, &ip, &headers).await?;
     Ok(Json(SessionResponse {
         token,
         user: row.user,

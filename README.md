@@ -52,8 +52,9 @@ To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your comp
 | `DATABASE_URL` | (required) | Postgres connection string |
 | `BIND` | `0.0.0.0:8080` | Address and port to listen on |
 | `CORS_ORIGINS` | `http://localhost:8081` | Comma-separated website origins that can call the API |
+| `TRUST_PROXY` | (off) | Set to `1` only behind a proxy that sets `X-Forwarded-For`. The API then takes the client IP from it (for rate limits and sessions); otherwise from the connection, so the header cannot be faked |
 
-Sign-in uses the v1 Better Auth tables (`user`, `account`, `session`) and its password hash format, so v1 accounts sign in to v2 with their v1 passwords, and passwords set in v2 work in v1. Test accounts in the local database: `seller1` / `seller1-password`, and the banned `banned1` / `banned-password`.
+Sign-in uses the v1 Better Auth tables (`user`, `account`, `session`) and its password hash format, so v1 accounts sign in to v2 with their v1 passwords, and passwords set in v2 work in v1. Rate limits (in memory, per API process): 5 wrong passwords per username in 15 minutes, 30 sign-in tries per IP in 15 minutes, 5 new accounts per IP per hour. Over the limit: 429 with `Retry-After`. Restarting the API clears them. Test accounts in the local database: `seller1` / `seller1-password`, and the banned `banned1` / `banned-password`.
 
 The app reads `EXPO_PUBLIC_API_URL` (default `http://localhost:8080`; `make app` sets it from `API_URL`) and `EXPO_PUBLIC_SITE_URL` (default `http://localhost:8081`).
 
