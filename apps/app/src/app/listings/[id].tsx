@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useTheme } from 'expo-router';
 import {
   FileText,
@@ -27,6 +26,7 @@ import {
 } from 'react-native';
 
 import { IconText, Money } from '@/components/icon-text';
+import { PhotoGallery } from '@/components/photo-gallery';
 import { api, SITE_URL, type ListingDetail } from '@/lib/api';
 
 export default function Listing() {
@@ -58,16 +58,9 @@ export default function Listing() {
   return (
     <ScrollView contentContainerStyle={[styles.page, wide && styles.wide]}>
       <Stack.Screen options={{ title: listing.title }} />
-      <ScrollView horizontal pagingEnabled style={wide ? styles.half : undefined}>
-        {listing.photos.map((url) => (
-          <Image
-            key={url}
-            source={url}
-            style={{ width: wide ? Math.min(width, 1200) / 2 - 24 : width - 24, aspectRatio: 4 / 3 }}
-            contentFit="cover"
-          />
-        ))}
-      </ScrollView>
+      <View style={[styles.gallery, wide && styles.half]}>
+        <PhotoGallery photos={listing.photos} width={wide ? Math.min(width, 1200) / 2 - 24 : width - 24} />
+      </View>
 
       <View style={[styles.details, wide && styles.half]}>
         <Money value={listing.asking_price} size={24} style={styles.price} />
@@ -120,6 +113,7 @@ const styles = StyleSheet.create({
   page: { padding: 12, gap: 16, width: '100%', maxWidth: 1200, alignSelf: 'center' },
   wide: { flexDirection: 'row', alignItems: 'flex-start' },
   half: { flex: 1 },
+  gallery: { borderRadius: 12, overflow: 'hidden' },
   details: { gap: 8 },
   price: { fontWeight: '700' },
   title: { fontSize: 18, fontWeight: '600' },

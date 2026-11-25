@@ -9,7 +9,10 @@ select 'l'||g, 'u1', case when g%5=0 then 'draft' else 'published' end,
   'A test description that is long enough for listing '||g, 'TCT', now() - (g||' hours')::interval
 from generate_series(1,45) g on conflict do nothing;
 insert into listings.listing_photo(id,listing_id,url,key,cover)
-select 'p'||g,'l'||g,'https://picsum.photos/seed/landil'||g||'/640/480','k'||g,true from generate_series(1,45) g on conflict do nothing;
+select 'p'||g,'l'||g,'https://picsum.photos/seed/landil'||g||'/640/480','k'||g,true from generate_series(1,45) g where g <> 3 on conflict do nothing;
+-- l1 has 6 photos (gallery, counter, viewer); l3 has none (empty state).
+insert into listings.listing_photo(id,listing_id,url,key,cover)
+select 'p1-'||g,'l1','https://picsum.photos/seed/landil1-'||g||'/1280/960','k1-'||g,false from generate_series(2,6) g on conflict do nothing;
 insert into listings.listing_doc(id,listing_id,url,key,name,visibility) values
  ('d1','l1','https://example.com/public.pdf','dk1','Tax declaration.pdf','public'),
  ('d2','l1','https://example.com/secret.pdf','dk2','TCT scan.pdf','private') on conflict do nothing;
