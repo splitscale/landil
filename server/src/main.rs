@@ -361,6 +361,7 @@ fn app(db: PgPool) -> Router {
         .route("/v1/auth/sign-in", post(auth::sign_in))
         .route("/v1/auth/sign-out", post(auth::sign_out))
         .route("/v1/me", get(auth::me))
+        .route("/v1/me/password", post(auth::change_password))
         .layer(
             CorsLayer::new()
                 .allow_origin(origins)

@@ -428,6 +428,66 @@ pub async fn sign_out(State(db): State<PgPool>, me: CurrentUser) -> Result<Statu
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[derive(Deserialize)]
+pub struct ChangePassword {
+    current_password: String,
+    new_password: String,
+}
+
+/// Returns 204 and signs out every other session of the account (Better Auth
+/// `revokeOtherSessions`): whoever knew the old password is out. This session stays.
+pub async fn change_password(
+    State(db): State<PgPool>,
+    me: CurrentUser,
+    Json(b): Json<ChangePassword>,
+) -> Result<StatusCode, AppError> {
+    check_password(&b.new_password).map_err(AppError::BadRequest)?;
+    // Same counter as sign-in: a stolen session must not allow unlimited guesses.
+    let key = me
+        .user
+        .username
+        .clone()
+        .unwrap_or_else(|| me.user.id.clone());
+    SIGN_IN_FAILURES.check(&key).map_err(AppError::TooMany)?;
+
+    let hash: Option<String> = sqlx::query_scalar(
+        r#"SELECT password FROM account WHERE "userId" = $1 AND "providerId" = 'credential'"#,
+    )
+    .bind(&me.user.id)
+    .fetch_optional(&db)
+    .await?
+    .flatten();
+    // ponytail: a Google-only account has no password to change; setting a first one is ENT-317 later.
+    let hash = hash.ok_or(AppError::BadRequest(
+        "This account signs in with Google and has no password",
+    ))?;
+    let current = b.current_password;
+    if !blocking(move || verify_password(&hash, &current)).await {
+        SIGN_IN_FAILURES.hit(&key);
+        return Err(AppError::BadRequest("Your current password is wrong"));
+    }
+    SIGN_IN_FAILURES.clear(&key);
+
+    let new = b.new_password;
+    let new_hash = blocking(move || hash_password(&new)).await;
+    let mut tx = db.begin().await?;
+    sqlx::query(
+        r#"UPDATE account SET password = $2, "updatedAt" = now()
+           WHERE "userId" = $1 AND "providerId" = 'credential'"#,
+    )
+    .bind(&me.user.id)
+    .bind(&new_hash)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(r#"DELETE FROM session WHERE "userId" = $1 AND token <> $2"#)
+        .bind(&me.user.id)
+        .bind(&me.token)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub async fn me(me: CurrentUser) -> Json<User> {
     Json(me.user)
 }

@@ -1,5 +1,5 @@
 import { Link, router, useTheme } from 'expo-router';
-import { BadgeCheck, LogOut } from 'lucide-react-native';
+import { BadgeCheck, ChevronRight, KeyRound, LogOut } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -43,6 +43,14 @@ export default function Account() {
         {row('Role', user.role)}
         {row('Plan', user.plan)}
       </View>
+      <Link href="/change-password" asChild>
+        <Pressable style={StyleSheet.flatten([styles.action, { borderColor: colors.border }])}>
+          <IconText icon={KeyRound} style={styles.bold}>
+            Change password
+          </IconText>
+          <ChevronRight size={18} color="#888" />
+        </Pressable>
+      </Link>
       <Pressable
         disabled={busy}
         onPress={async () => {
@@ -66,6 +74,14 @@ const styles = StyleSheet.create({
   group: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
   row: { flexDirection: 'row', justifyContent: 'space-between', padding: 14, borderTopWidth: StyleSheet.hairlineWidth },
   muted: { color: '#888' },
+  action: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+  },
   signOut: { borderWidth: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
   bold: { fontWeight: '600' },
 });

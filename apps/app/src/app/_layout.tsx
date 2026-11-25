@@ -36,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="sign-in" options={{ title: 'Sign in', presentation: 'modal' }} />
           <Stack.Screen name="sign-up" options={{ title: 'Create account', presentation: 'modal' }} />
           <Stack.Screen name="account" options={{ title: 'Account' }} />
+          <Stack.Screen name="change-password" options={{ title: 'Change password' }} />
         </Stack>
       </SessionProvider>
     </ThemeProvider>

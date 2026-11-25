@@ -45,6 +45,7 @@ To connect over Wi-Fi instead, run `make app API_URL=http://<LAN IP of your comp
 | `POST /v1/auth/sign-in` | Body `{username, password}`. Returns `{token, user}`. 401 for a wrong username or password, 403 for a banned account |
 | `POST /v1/auth/sign-out` | Ends the session in `Authorization: Bearer <token>`. 204 |
 | `GET /v1/me` | The signed-in user. 401 without a valid session |
+| `POST /v1/me/password` | Body `{current_password, new_password}`. Changes the password and signs out every other session of the account. 204. Wrong current passwords count toward the sign-in limit |
 | `POST /v1/listings/{id}/views` | Body `{"device_id": "..."}`. Records a view, at most one per device and listing every 30 minutes (as in v1). Stores only a hash of the device ID. Returns 204 |
 
 | Variable | Default | Use |
