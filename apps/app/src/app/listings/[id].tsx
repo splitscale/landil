@@ -1,8 +1,9 @@
-import { Stack, useLocalSearchParams, useTheme } from 'expo-router';
+import { Link, Stack, useLocalSearchParams, useTheme } from 'expo-router';
 import {
+  ChevronRight,
   FileText,
   LandPlot,
-  Lock,
+  RotateCw,
   MapPin,
   Ruler,
   Scale,
@@ -12,10 +13,9 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   ScrollView,
   Share,
@@ -37,14 +37,26 @@ export default function Listing() {
   const [listing, setListing] = useState<ListingDetail>();
   const [error, setError] = useState<string>();
 
-  useEffect(() => {
-    api<ListingDetail>(`/v1/listings/${id}`).then(setListing, (e) => setError(e.message));
+  const load = useCallback(() => {
+    setError(undefined);
+    api<ListingDetail>(`/v1/listings/${id}`).then(setListing, (e: Error) => setError(e.message));
   }, [id]);
+  useEffect(load, [load]);
 
-  if (error) return <Text style={[styles.note, { color: colors.text }]}>{error}</Text>;
+  if (error) {
+    return (
+      <Pressable onPress={load} style={styles.note}>
+        <Text style={[styles.center, { color: colors.text }]}>{error}</Text>
+        <IconText icon={RotateCw} color={colors.primary} style={styles.buttonText}>
+          Retry
+        </IconText>
+      </Pressable>
+    );
+  }
   if (!listing) return <ActivityIndicator style={styles.note} />;
 
   const text = { color: colors.text };
+  const docCount = listing.documents.length + listing.private_document_count;
   const row = (icon: LucideIcon, label: string, value?: string | null) =>
     value ? (
       <View style={styles.row} key={label}>
@@ -83,18 +95,16 @@ export default function Listing() {
 
         <Text style={[text, styles.description]}>{listing.description}</Text>
 
-        <Text style={[text, styles.section]}>Documents</Text>
-        {listing.documents.map((d) => (
-          <Pressable key={d.url} onPress={() => Linking.openURL(d.url)}>
-            <IconText icon={FileText} color={colors.primary}>
-              {d.name}
-            </IconText>
-          </Pressable>
-        ))}
-        {listing.private_document_count > 0 && (
-          <IconText icon={Lock} color="#888">
-            {listing.private_document_count} private document(s), visible to the seller
-          </IconText>
+        {docCount > 0 && (
+          <Link href={`/listings/${listing.id}/documents`} asChild>
+            <Pressable
+              style={StyleSheet.flatten([styles.docs, { borderColor: colors.border, backgroundColor: colors.card }])}>
+              <FileText size={20} color={colors.primary} />
+              <Text style={[text, styles.docsLabel]}>Documents</Text>
+              <Text style={styles.muted}>{docCount}</Text>
+              <ChevronRight size={18} color="#888" />
+            </Pressable>
+          </Link>
         )}
 
         <Pressable
@@ -120,8 +130,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   value: { flexShrink: 1, textAlign: 'right' },
   description: { marginTop: 8, lineHeight: 22 },
-  section: { marginTop: 8, fontWeight: '600' },
+  docs: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, padding: 14, borderWidth: 1, borderRadius: 12 },
+  docsLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  muted: { color: '#888' },
+  center: { textAlign: 'center' },
   button: { marginTop: 16, padding: 14, borderRadius: 8, alignItems: 'center' },
   buttonText: { fontWeight: '600' },
-  note: { textAlign: 'center', padding: 24 },
+  note: { padding: 24, alignItems: 'center', gap: 8 },
 });
