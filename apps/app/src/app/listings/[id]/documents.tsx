@@ -49,8 +49,9 @@ export default function Documents() {
           {documents.map((d, i) => (
             <Pressable
               key={d.url}
-              // In-app browser: the user stays in Landil and comes back with one tap.
-              onPress={() => WebBrowser.openBrowserAsync(d.url)}
+              // In-app browser: the user stays in Landil and comes back with one tap. createTask: false keeps
+              // the tab in the app's Android task, so Back returns here and not to whatever task was before.
+              onPress={() => WebBrowser.openBrowserAsync(d.url, { createTask: false })}
               style={({ pressed }) => [styles.row, i > 0 && [styles.divider, border], pressed && styles.pressed]}
               accessibilityRole="link">
               <FileText size={20} color={colors.primary} />
